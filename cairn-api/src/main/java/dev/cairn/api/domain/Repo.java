@@ -67,6 +67,11 @@ public class Repo {
         return visibility;
     }
 
+    /** FR-REPO-1's visibility control (frontend spec, section 5.9), exercised by {@code AccessController}. */
+    public void changeVisibility(Visibility visibility) {
+        this.visibility = visibility;
+    }
+
     public String ownerName() {
         return ownerUser != null ? ownerUser.username() : ownerOrg.name();
     }

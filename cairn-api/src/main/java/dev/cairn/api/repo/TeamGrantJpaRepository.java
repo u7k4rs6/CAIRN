@@ -5,8 +5,11 @@ import dev.cairn.api.domain.Team;
 import dev.cairn.api.domain.TeamGrant;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TeamGrantJpaRepository extends JpaRepository<TeamGrant, Long> {
     Optional<TeamGrant> findByTeamAndRepo(Team team, Repo repo);
+
+    List<TeamGrant> findByRepo(Repo repo);
 }

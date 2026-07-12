@@ -6,10 +6,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 /** Owns repositories and contains teams (architecture doc, section 5). */
 @Entity
-@Table(name = "organizations")
+@Table(name = "organizations", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 public class Organization {
 
     @Id

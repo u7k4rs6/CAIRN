@@ -1,0 +1,11 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+*.iml
+.idea/
+.vscode/
+*.log
+.DS_Store
+
+# web/ has its own .gitignore for node_modules, .next, etc.

@@ -1,0 +1,6 @@
+// Standalone VCS engine library. No dependency on any other module in this repo,
+// and no dependency on a web framework or a database driver: it compiles and tests
+// on its own, which is the point (dependency inversion made literal).
+plugins {
+    id 'java-library'
+}

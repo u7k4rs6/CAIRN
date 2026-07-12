@@ -1,0 +1,5 @@
+rootProject.name = 'cairn'
+
+include 'cairn-vcs'
+include 'cairn-transfer'
+include 'cairn-api'

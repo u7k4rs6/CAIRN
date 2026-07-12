@@ -1,0 +1,9 @@
+// Git smart-HTTP protocol implementation, including negotiation. Depends on the
+// engine only; knows nothing about HTTP frameworks, auth, or the metadata store.
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api project(':cairn-vcs')
+}

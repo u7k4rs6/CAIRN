@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: cairn-api
+  jpa:
+    hibernate:
+      ddl-auto: update
+  datasource:
+    url: jdbc:h2:mem:cairn;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+  jackson:
+    # Domain classes deliberately use plain accessors (title(), not getTitle()), to
+    # read as domain behavior rather than JavaBean boilerplate. Jackson's default
+    # bean-getter detection would otherwise serialize every one of them as "{}".
+    visibility:
+      field: any
+      getter: none
+      is-getter: none
+
+cairn:
+  repos-dir: ./data/repos

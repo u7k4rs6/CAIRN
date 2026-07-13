@@ -38,7 +38,19 @@ export type FileDiff = {
 };
 export type CommitDiff = { commit: CommitView; diffs: FileDiff[] };
 export type BlobView = { path: string; content: string; size: number };
-export type Issue = { id: number; title: string; body: string; state: "OPEN" | "CLOSED"; author: { username: string } };
+export type Label = { id: number; name: string; color: string };
+export type Milestone = { id: number; title: string; description: string | null; dueAt: string | null; state: "OPEN" | "CLOSED" };
+export type Issue = {
+  id: number;
+  title: string;
+  body: string;
+  state: "OPEN" | "CLOSED";
+  author: { username: string };
+  labels: Label[];
+  assignees: { username: string }[];
+  milestone: Milestone | null;
+};
+export type IssueFilters = { state?: string; label?: string; assignee?: string; milestone?: string };
 export type PullRequestView = {
   id: number;
   title: string;
@@ -60,11 +72,17 @@ export const api = {
     request<CommitView[]>(`/api/repos/${owner}/${repo}/commits/${ref}`),
   commitDiff: (owner: string, repo: string, sha: string) =>
     request<CommitDiff>(`/api/repos/${owner}/${repo}/commit/${sha}`),
-  issues: (owner: string, repo: string) => request<Issue[]>(`/api/repos/${owner}/${repo}/issues`),
+  issues: (owner: string, repo: string, filters: IssueFilters = {}) => {
+    const params = new URLSearchParams(Object.entries(filters).filter(([, v]) => v) as [string, string][]);
+    const query = params.toString();
+    return request<Issue[]>(`/api/repos/${owner}/${repo}/issues${query ? `?${query}` : ""}`);
+  },
   issue: async (owner: string, repo: string, n: string) => {
     const all = await request<Issue[]>(`/api/repos/${owner}/${repo}/issues`);
     return all.find((i) => String(i.id) === n) ?? null;
   },
+  labels: (owner: string, repo: string) => request<Label[]>(`/api/repos/${owner}/${repo}/labels`),
+  milestones: (owner: string, repo: string) => request<Milestone[]>(`/api/repos/${owner}/${repo}/milestones`),
   pulls: (owner: string, repo: string) => request<PullRequestView[]>(`/api/repos/${owner}/${repo}/pulls`),
   pull: async (owner: string, repo: string, n: string) => {
     const all = await request<PullRequestView[]>(`/api/repos/${owner}/${repo}/pulls`);

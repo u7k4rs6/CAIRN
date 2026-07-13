@@ -78,8 +78,15 @@ class OrgAndAccessControllerTest {
     }
 
     private Actor newActor(String usernamePrefix) {
+        // A UUID suffix, not just the per-class counter: every @SpringBootTest class
+        // in this module shares one H2 in-memory database within the same JVM
+        // (application.yml's jdbc:h2:mem:cairn is not per-class), so a small
+        // sequential counter alone can collide with an identically-prefixed actor
+        // from a different test class (this exact bug: this class's "owner1"
+        // collided with IssueControllerTest's "owner1").
         int n = COUNTER.incrementAndGet();
-        User user = users.save(new User(usernamePrefix + n, usernamePrefix + n + "@cairn.dev", ""));
+        String username = usernamePrefix + n + "-" + UUID.randomUUID().toString().substring(0, 8);
+        User user = users.save(new User(username, username + "@cairn.dev", ""));
         String rawToken = "token-" + UUID.randomUUID();
         tokens.save(new PersonalAccessToken(user, tokenHasher.hash(rawToken), "repo:write,org:admin", null));
         return new Actor(user, rawToken);

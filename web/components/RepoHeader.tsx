@@ -5,6 +5,7 @@ export function RepoHeader({ owner, repo, active }: { owner: string; repo: strin
     { key: "code", label: "Code", href: `/${owner}/${repo}` },
     { key: "issues", label: "Issues", href: `/${owner}/${repo}/issues` },
     { key: "pulls", label: "Pull requests", href: `/${owner}/${repo}/pulls` },
+    { key: "search", label: "Search", href: `/${owner}/${repo}/search` },
     // Not gated on the current user's role in the tab bar itself: this app has no
     // server-side session, so a Server Component rendering this header cannot know
     // the browser's effective role (see AccessSettingsPanel's doc comment). The

@@ -47,6 +47,9 @@ export type PullRequestView = {
   state: string;
   author: { username: string };
 };
+export type SearchLineMatch = { lineNumber: number; line: string };
+export type SearchFileMatch = { path: string; lines: SearchLineMatch[] };
+export type SearchResponse = { indexing: boolean; queryTooShort: boolean; results: SearchFileMatch[] };
 
 export const api = {
   tree: (owner: string, repo: string, ref: string, path: string[] = []) =>
@@ -67,4 +70,6 @@ export const api = {
     const all = await request<PullRequestView[]>(`/api/repos/${owner}/${repo}/pulls`);
     return all.find((p) => String(p.id) === n) ?? null;
   },
+  search: (owner: string, repo: string, q: string) =>
+    request<SearchResponse>(`/api/repos/${owner}/${repo}/search?q=${encodeURIComponent(q)}`),
 };

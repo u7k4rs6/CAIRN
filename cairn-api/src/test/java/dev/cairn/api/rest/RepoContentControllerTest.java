@@ -108,6 +108,27 @@ class RepoContentControllerTest {
     }
 
     @Test
+    void blameAttributesEveryLineToTheSeedCommit() {
+        seed();
+        var handle = repositories.resolve(ownerName, repoName);
+        String sha = handle.refStore().resolve("refs/heads/main").orElseThrow().hex();
+
+        var response = rest.getForEntity(baseUrl() + "/api/repos/" + ownerName + "/" + repoName + "/blame/main/README.md", List.class);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).hasSize(1);
+        Map<?, ?> line = (Map<?, ?>) response.getBody().get(0);
+        assertThat(line.get("commitId")).isEqualTo(sha);
+        assertThat(line.get("line")).isEqualTo("# Hello\n");
+    }
+
+    @Test
+    void blameOnANonexistentPathIsNotFound() {
+        seed();
+        var response = rest.getForEntity(baseUrl() + "/api/repos/" + ownerName + "/" + repoName + "/blame/main/nope.txt", String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+    }
+
+    @Test
     void commitsReturnsHistory() {
         seed();
         var response = rest.getForEntity(baseUrl() + "/api/repos/" + ownerName + "/" + repoName + "/commits/main", List.class);

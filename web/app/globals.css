@@ -11,6 +11,17 @@
   --danger: #cf222e;
   --success: #1a7f37;
   --warning: #9a6700;
+
+  /* A dedicated syntax-highlighting palette, distinct from the state colors above
+     (danger/success/warning are reserved for diff add/delete and form errors
+     elsewhere in this app; reusing them for token classes would make "red" mean
+     two unrelated things on the same screen, e.g. a diff deletion vs. a keyword). */
+  --syntax-keyword: #cf222e;
+  --syntax-entity: #8250df;
+  --syntax-string: #0a3069;
+  --syntax-constant: #0550ae;
+  --syntax-variable: #953800;
+  --syntax-comment: #6e7781;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,6 +36,13 @@
     --danger: #f85149;
     --success: #3fb950;
     --warning: #d29922;
+
+    --syntax-keyword: #ff7b72;
+    --syntax-entity: #d2a8ff;
+    --syntax-string: #a5d6ff;
+    --syntax-constant: #79c0ff;
+    --syntax-variable: #ffa657;
+    --syntax-comment: #8b949e;
   }
 }
 
@@ -66,4 +84,60 @@ a {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+}
+
+/* Syntax highlighting (frontend spec section 5.3/1: CodeViewer and DiffView both
+   render highlight.js output). See lib/highlight.ts for why this highlights one
+   line at a time rather than the whole file. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-tag,
+.hljs-name {
+  color: var(--syntax-keyword);
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_,
+.hljs-section,
+.hljs-selector-class {
+  color: var(--syntax-entity);
+}
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp {
+  color: var(--syntax-string);
+}
+.hljs-type,
+.hljs-built_in,
+.hljs-class,
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--syntax-constant);
+}
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attr,
+.hljs-attribute,
+.hljs-params {
+  color: var(--syntax-variable);
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 700;
+}
+.hljs-deletion {
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+}
+.hljs-addition {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
 }

@@ -7,6 +7,7 @@ import dev.cairn.api.domain.Role;
 import dev.cairn.api.git.RepositoryRegistry;
 import dev.cairn.api.permission.PermissionResolver;
 import dev.cairn.api.repo.RepoJpaRepository;
+import dev.cairn.vcs.blame.Blame;
 import dev.cairn.vcs.dag.RevWalk;
 import dev.cairn.vcs.diff.FileDiff;
 import dev.cairn.vcs.diff.Lines;
@@ -134,6 +135,36 @@ public class RepoContentController {
                 "path", path,
                 "content", new String(blob.content(), StandardCharsets.UTF_8),
                 "size", blob.size()));
+    }
+
+    public record BlameLineView(int lineNumber, String line, String commitId) {
+    }
+
+    /** FR-BROWSE-1: each line attributed to the commit that last changed it (a real engine feature, {@link Blame}, not a stub). */
+    @GetMapping("/blame/{ref}/**")
+    public ResponseEntity<?> blame(@PathVariable String owner, @PathVariable String name, @PathVariable String ref,
+                                    HttpServletRequest request) {
+        Repo repo = requireReadableRepo(owner, name, request);
+        if (repo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        var handle = repositories.resolve(owner, name);
+        String path = extractPath(request, ref);
+
+        Optional<ObjectId> commitId = resolveRef(handle, ref);
+        if (commitId.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Commit commit = (Commit) handle.objectStore().get(commitId.get()).orElseThrow();
+        ObjectId blobId = navigateToBlob(handle.objectStore(), commit.treeId(), path);
+        if (blobId == null) {
+            return ResponseEntity.notFound().build();
+        }
+        List<Blame.LineBlame> lines = Blame.blame(handle.objectStore(), commitId.get(), path);
+        List<BlameLineView> views = lines.stream()
+                .map(l -> new BlameLineView(l.lineNumber(), l.line(), l.commitId().hex()))
+                .toList();
+        return ResponseEntity.ok(views);
     }
 
     @GetMapping("/commits/{ref}")

@@ -1,4 +1,5 @@
 import type { FileDiff } from "@/lib/api";
+import { highlightLine, languageForPath } from "@/lib/highlight";
 
 type Row = { kind: "equal" | "add" | "del"; oldNo: number | null; newNo: number | null; text: string };
 
@@ -39,47 +40,50 @@ export function DiffView({ diffs }: { diffs: FileDiff[] }) {
   }
   return (
     <div className="flex flex-col gap-4">
-      {diffs.map((diff) => (
-        <div key={diff.path} className="border border-border rounded overflow-hidden">
-          <div className="bg-bg-subtle px-3 py-1.5 text-sm font-mono-data flex items-center gap-2">
-            <span className={
-              diff.kind === "ADDED" ? "text-success" : diff.kind === "DELETED" ? "text-danger" : "text-fg-muted"
-            }>
-              {diff.kind === "ADDED" ? "added" : diff.kind === "DELETED" ? "deleted" : "modified"}
-            </span>
-            <span>{diff.path}</span>
+      {diffs.map((diff) => {
+        const language = languageForPath(diff.path);
+        return (
+          <div key={diff.path} className="border border-border rounded overflow-hidden">
+            <div className="bg-bg-subtle px-3 py-1.5 text-sm font-mono-data flex items-center gap-2">
+              <span className={
+                diff.kind === "ADDED" ? "text-success" : diff.kind === "DELETED" ? "text-danger" : "text-fg-muted"
+              }>
+                {diff.kind === "ADDED" ? "added" : diff.kind === "DELETED" ? "deleted" : "modified"}
+              </span>
+              <span>{diff.path}</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs font-mono-data border-collapse">
+                <tbody>
+                  {rowsFor(diff).map((row, i) => (
+                    <tr
+                      key={i}
+                      className={
+                        row.kind === "add"
+                          ? "bg-success/10"
+                          : row.kind === "del"
+                          ? "bg-danger/10"
+                          : ""
+                      }
+                    >
+                      <td className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border">
+                        {row.oldNo ?? ""}
+                      </td>
+                      <td className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border">
+                        {row.newNo ?? ""}
+                      </td>
+                      <td className="pl-2 whitespace-pre">
+                        {row.kind === "add" ? "+" : row.kind === "del" ? "-" : " "}
+                        <span dangerouslySetInnerHTML={{ __html: highlightLine(row.text, language) }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono-data border-collapse">
-              <tbody>
-                {rowsFor(diff).map((row, i) => (
-                  <tr
-                    key={i}
-                    className={
-                      row.kind === "add"
-                        ? "bg-success/10"
-                        : row.kind === "del"
-                        ? "bg-danger/10"
-                        : ""
-                    }
-                  >
-                    <td className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border">
-                      {row.oldNo ?? ""}
-                    </td>
-                    <td className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border">
-                      {row.newNo ?? ""}
-                    </td>
-                    <td className="pl-2 whitespace-pre">
-                      {row.kind === "add" ? "+" : row.kind === "del" ? "-" : " "}
-                      {row.text}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

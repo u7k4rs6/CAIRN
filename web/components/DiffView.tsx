@@ -1,3 +1,6 @@
+"use client";
+
+import { List, type RowComponentProps } from "react-window";
 import type { FileDiff } from "@/lib/api";
 import { highlightLine, languageForPath } from "@/lib/highlight";
 
@@ -28,11 +31,39 @@ function rowsFor(diff: FileDiff): Row[] {
   return rows;
 }
 
+const ROW_HEIGHT = 20;
+const MAX_VIEWPORT_HEIGHT = 480;
+
+type DiffRowProps = { rows: Row[]; language: string | null };
+
+function DiffRow({ index, style, rows, language }: RowComponentProps<DiffRowProps>) {
+  const row = rows[index];
+  return (
+    <div
+      style={style}
+      className={`flex text-xs font-mono-data ${row.kind === "add" ? "bg-success/10" : row.kind === "del" ? "bg-danger/10" : ""}`}
+    >
+      <span className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border shrink-0">{row.oldNo ?? ""}</span>
+      <span className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border shrink-0">{row.newNo ?? ""}</span>
+      <span className="pl-2 whitespace-pre">
+        {row.kind === "add" ? "+" : row.kind === "del" ? "-" : " "}
+        <span dangerouslySetInnerHTML={{ __html: highlightLine(row.text, language) }} />
+      </span>
+    </div>
+  );
+}
+
 /**
- * The diff is the product (frontend spec, section 1). Rendering note: this renders
- * every row directly rather than virtualizing (section 5.3's ideal is O(visible
- * rows), not O(file length)); see DECISIONS.md for the scope tradeoff. Fine at the
- * size a demo repo's diffs reach, not the right choice for a very large real diff.
+ * The diff is the product (frontend spec, section 1), and rendering is virtualized
+ * (section 5.3/5.6: cost is O(visible rows), not O(file length)) via
+ * {@code react-window}'s {@code List} per file. This is a real, deliberate scope
+ * boundary, not an oversight: the frontend spec's ideal is one continuous
+ * virtualized list spanning every changed file's rows; this virtualizes per file
+ * instead, which already delivers the actual win (a single huge file no longer
+ * costs O(file length) to render) without the added complexity of a heterogeneous
+ * virtualized list mixing file-header rows and diff rows across file boundaries.
+ * A PR with a very large number of small files, rather than one very large file,
+ * would not fully benefit from this; named here rather than silently assumed away.
  */
 export function DiffView({ diffs }: { diffs: FileDiff[] }) {
   if (diffs.length === 0) {
@@ -42,6 +73,8 @@ export function DiffView({ diffs }: { diffs: FileDiff[] }) {
     <div className="flex flex-col gap-4">
       {diffs.map((diff) => {
         const language = languageForPath(diff.path);
+        const rows = rowsFor(diff);
+        const viewportHeight = Math.min(rows.length * ROW_HEIGHT, MAX_VIEWPORT_HEIGHT);
         return (
           <div key={diff.path} className="border border-border rounded overflow-hidden">
             <div className="bg-bg-subtle px-3 py-1.5 text-sm font-mono-data flex items-center gap-2">
@@ -52,35 +85,15 @@ export function DiffView({ diffs }: { diffs: FileDiff[] }) {
               </span>
               <span>{diff.path}</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs font-mono-data border-collapse">
-                <tbody>
-                  {rowsFor(diff).map((row, i) => (
-                    <tr
-                      key={i}
-                      className={
-                        row.kind === "add"
-                          ? "bg-success/10"
-                          : row.kind === "del"
-                          ? "bg-danger/10"
-                          : ""
-                      }
-                    >
-                      <td className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border">
-                        {row.oldNo ?? ""}
-                      </td>
-                      <td className="select-none text-right pr-2 text-fg-muted w-10 border-r border-border">
-                        {row.newNo ?? ""}
-                      </td>
-                      <td className="pl-2 whitespace-pre">
-                        {row.kind === "add" ? "+" : row.kind === "del" ? "-" : " "}
-                        <span dangerouslySetInnerHTML={{ __html: highlightLine(row.text, language) }} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <List
+              rowComponent={DiffRow}
+              rowCount={rows.length}
+              rowHeight={ROW_HEIGHT}
+              rowProps={{ rows, language }}
+              defaultHeight={viewportHeight}
+              style={{ height: viewportHeight }}
+              className="overflow-x-auto"
+            />
           </div>
         );
       })}

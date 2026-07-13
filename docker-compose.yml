@@ -1,0 +1,84 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cairn
+      POSTGRES_USER: cairn
+      POSTGRES_PASSWORD: cairn
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cairn -d cairn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: cairn-api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # DevDataSeeder's "seed" profile (cairn-api/src/main/java/dev/cairn/api/devtools/DevDataSeeder.java)
+      # populates the acme/demo repo and prints a working PAT on first boot against
+      # an empty database - exactly the quickstart this compose file exists to give.
+      SPRING_PROFILES_ACTIVE: seed
+      # application.yml's defaults are an in-memory H2 database (dies with the JVM)
+      # and Hibernate ddl-auto: update; these Spring Boot relaxed-binding env vars
+      # override just the datasource to the real, already-present-on-the-classpath
+      # Postgres driver (cairn-api/build.gradle: "runtimeOnly 'org.postgresql:postgresql'"),
+      # so schema/data actually survive a `docker compose down` + `up`.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/cairn
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_DATASOURCE_USERNAME: cairn
+      SPRING_DATASOURCE_PASSWORD: cairn
+      # cairn.repos-dir (RepositoryRegistry.java) - the loose-object store's root.
+      # Backed by the repos-data named volume below.
+      CAIRN_REPOS_DIR: /data/repos
+      # Matches SecurityConfig's own default (http://localhost:3000); set explicitly
+      # here so the CORS origin stays correct even if that default ever changes.
+      CAIRN_WEB_ORIGIN: http://localhost:3000
+      # Observed on a from-clean `docker compose up`: HikariCP's pool init makes
+      # exactly one connection attempt by default (initializationFailTimeout=1, i.e.
+      # fail immediately on the first miss, no retry) and a freshly created
+      # container's network can take a moment to settle even after `db` is already
+      # "healthy" - a hard failure here crashes the whole app on first boot. This
+      # gives pool init up to 20s of retrying instead of one shot.
+      SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: "20000"
+    volumes:
+      - repos-data:/data/repos
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: web
+      dockerfile: Dockerfile
+      args:
+        # Baked into the client bundle at build time (see web/Dockerfile's comment).
+        NEXT_PUBLIC_API_BASE: http://localhost:8080
+    # web/lib/api.ts's Server Components and every "use client" component both read
+    # the same NEXT_PUBLIC_API_BASE URL, and one of those runs in the browser (on
+    # the host) while the other runs inside this container - so both need "localhost"
+    # to mean the same machine. Host networking (Linux only) is what makes that true:
+    # a bridge network's service-name DNS (e.g. http://api:8080) would work for the
+    # container but is unreachable from the browser, which is the actual constraint
+    # here, not a shortcut around "compose networking" support for it.
+    network_mode: host
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8080
+      PORT: "3000"
+      # Next's standalone server.js binds to os.hostname() by default. Under host
+      # networking the container sees the real host's hostname (resolved via the
+      # host's own /etc/hosts, e.g. Debian/Ubuntu's 127.0.1.1 alias) instead of a
+      # container-local one, so without this it listens on that one specific
+      # loopback alias instead of every interface - unreachable via "localhost".
+      HOSTNAME: "0.0.0.0"
+    depends_on:
+      - api
+
+volumes:
+  db-data:
+  repos-data:

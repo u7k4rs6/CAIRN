@@ -1,0 +1,10 @@
+# Applies to the cairn-api build context (repo root - see cairn-api/Dockerfile).
+# web/ has its own build context and its own .dockerignore.
+web
+.git
+build
+*/build
+.gradle
+data
+*.md
+docs

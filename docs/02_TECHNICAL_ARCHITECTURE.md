@@ -4,6 +4,7 @@
 **Status:** Draft v3
 **Changes in v3:** implementation language set to Java; code samples use Java interfaces, the module layout uses Gradle modules, and the tech stack lists Java libraries (MessageDigest, Deflater and Inflater, nio) with a Spring Boot API. Docs 3 and 4 are unaffected: security is language-agnostic, and the frontend is React regardless.
 **Changes in v2:** every core operation now carries a complexity and tradeoff note; the diff and merge sections name their algorithms and state their limits; packfiles with delta and generation numbers are specified as core; smart transfer negotiation is a core flow; a consolidated complexity table (section 10) is added; partial clone and reachability bitmaps are marked paper-only.
+**Changes in v4 (post-implementation):** sections 9 and 10 are superseded by `docs/HLD.md` and `docs/COMPLEXITY.md`, written from the actual M1-M8 code rather than the pre-implementation estimate; every figure in those two docs is cited to an exact file and method, and any place where the as-built behavior beat the original estimate (e.g. packed reads not multiplying by delta-chain depth) is called out explicitly rather than silently left as the old, less accurate number.
 
 This doc carries the low-level design weight. The reason to build Cairn is to show clean class modeling, design patterns, and SOLID across a real domain, a genuine systems core, and explicit reasoning about *why* each structure was chosen, not only *what* it is. Where a data structure or algorithm is picked, its cost and its alternative are stated inline.
 
@@ -216,17 +217,25 @@ Both reachability computations use the DAG and generation numbers to prune, so t
 
 ## 9. Scale and HLD (design, not v1 code)
 
-- **Repository sharding.** Repos are independent object-storage namespaces, so they shard by repo id across nodes or buckets. A routing layer maps `{owner}/{name}` to a shard.
-- **Metadata store.** Relational, hot read paths served from cache, read replicas for scale-out reads.
-- **Caching.** Rendered file and diff views, repo metadata, sessions. Invalidate rendered views on ref update.
-- **Code search.** Full-text over code is a trigram or inverted index, not a `LIKE` scan (section 10 states the cost). This is how real hosts do it and is a strong thing to be able to explain.
-- **Transfer at scale.** Packfiles plus negotiation minimize bytes; large-object handling is a separate concern (mention, do not build).
-- **Fan-out.** Feeds and notifications are asynchronous fan-out off an event stream, which is why Observer sits at the domain boundary.
-- **Paper-only stretch:** partial clone (blob filtering, promisor remotes) and reachability bitmaps, described here with their tradeoffs and deferred.
+Superseded by **[`docs/HLD.md`](HLD.md)**, written after the engine and platform were
+built rather than before. This section originally sketched the scale story
+pre-implementation; `HLD.md` is now the single source of truth, grounded in what the
+code actually does (which classes are single-node today, what the real shard key is,
+what breaks at the shard boundary) rather than a generic distributed-systems sketch.
+It also carries the "designed, not built" writeup for partial clone and reachability
+bitmaps, unambiguously marked as not implemented.
 
 ## 10. Complexity and tradeoffs (core operations)
 
-This is the section that answers "why," not just "what." Every operation the engine and platform depend on, with its cost, the better option, and the tradeoff.
+Superseded by **[`docs/COMPLEXITY.md`](COMPLEXITY.md)**, which is now the single
+source of truth for every operation's cost. The table below was written before the
+engine existed and states the target, not the as-built behavior (e.g. it estimates
+packed `get` as O(depth x n) for chain application; the actual `PackReader`
+implementation resolves each entry once against an already-materialized base, so
+reconstruction cost does not multiply by chain depth — see `COMPLEXITY.md`'s "Object
+read: packed" row for the precise, code-cited bound). Use `COMPLEXITY.md` for any
+figure needed going forward; this table is kept only as a historical record of the
+pre-implementation estimate.
 
 | Operation | Baseline cost | Better option | The tradeoff |
 |---|---|---|---|

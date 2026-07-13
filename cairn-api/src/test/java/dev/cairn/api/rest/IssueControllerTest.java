@@ -128,6 +128,30 @@ class IssueControllerTest {
     }
 
     @Test
+    void removingALabelActuallyPersistsAcrossSeparateRequests() {
+        // Regression test: Issue.removeLabel used to remove by Set.remove(label)'s
+        // default object-identity equals, which silently no-ops once the label
+        // fetched here and the one already inside the issue's labels collection
+        // are two distinct Java objects for the same row (true as soon as
+        // spring.jpa.open-in-view is off: no shared session/first-level cache
+        // across the two separate repository calls involved).
+        Actor owner = newActor("owner");
+        String path = seedRepo(owner);
+        var label = post("/api/repos/" + path + "/labels", owner, "{\"name\":\"bug\",\"color\":\"d73a4a\"}");
+        Long labelId = ((Number) label.getBody().get("id")).longValue();
+        var issue = post("/api/repos/" + path + "/issues", owner, "{\"title\":\"x\",\"body\":\"y\"}");
+        Long issueId = ((Number) issue.getBody().get("id")).longValue();
+        post("/api/repos/" + path + "/issues/" + issueId + "/labels", owner, "{\"labelId\":" + labelId + "}");
+
+        var revoke = rest.exchange(baseUrl() + "/api/repos/" + path + "/issues/" + issueId + "/labels/" + labelId,
+                HttpMethod.DELETE, new HttpEntity<>(headers(owner)), Void.class);
+        assertThat(revoke.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        var filtered = getList("/api/repos/" + path + "/issues?label=bug", owner);
+        assertThat(filtered.getBody()).isEmpty();
+    }
+
+    @Test
     void addingALabelFromAnotherRepoIsRejected() {
         Actor owner = newActor("owner");
         String path = seedRepo(owner);

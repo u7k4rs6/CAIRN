@@ -4,6 +4,14 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    # M8's DECISIONS.md left this at its default (true) rather than audit every
+    # lazy-association access under time pressure. Now disabled for real: no
+    # Hibernate session survives past each repository call into response
+    # serialization, so any entity a controller returns directly must have already
+    # loaded whatever it exposes (see IssueJpaRepository's @EntityGraph overrides
+    # for the one place this actually bit: Issue.labels/assignees, its only
+    # lazy-by-default (@ManyToMany) associations).
+    open-in-view: false
   datasource:
     url: jdbc:h2:mem:cairn;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver

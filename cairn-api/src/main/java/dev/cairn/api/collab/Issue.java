@@ -94,8 +94,20 @@ public class Issue {
         labels.add(label);
     }
 
+    /**
+     * Removes by matching {@code id}, not {@code Set.remove(label)}'s default
+     * object-identity {@code equals}: {@code label} here and the element already
+     * inside {@code labels} were loaded by two separate repository calls (with
+     * {@code spring.jpa.open-in-view} off, each gets its own Hibernate session, no
+     * shared first-level cache to deduplicate them), so they are two distinct Java
+     * objects for the same database row. {@code Label}/{@code User} deliberately
+     * do not override {@code equals}/{@code hashCode} (matching every other entity
+     * in this codebase), so identity-based {@code Set.remove} would silently no-op
+     * here - a real bug this project's own open-in-view change surfaced, not a
+     * hypothetical.
+     */
     public void removeLabel(Label label) {
-        labels.remove(label);
+        labels.removeIf(l -> l.id() != null && l.id().equals(label.id()));
     }
 
     public Set<User> assignees() {
@@ -106,8 +118,9 @@ public class Issue {
         assignees.add(user);
     }
 
+    /** See {@link #removeLabel}'s Javadoc: the same identity-vs-id pitfall applies here. */
     public void removeAssignee(User user) {
-        assignees.remove(user);
+        assignees.removeIf(a -> a.id() != null && a.id().equals(user.id()));
     }
 
     public Milestone milestone() {

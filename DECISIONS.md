@@ -2,6 +2,155 @@
 
 Judgment calls made while building Cairn, newest first within each milestone.
 
+## Gap-closure round: P2 (correctness and quality)
+
+- **`spring.jpa.open-in-view=false` was verified empirically, not just flipped.**
+  Flipping it broke five `IssueControllerTest` cases immediately, in two genuinely
+  different ways: (1) `IssueJpaRepository`'s first `@EntityGraph` attempt used the
+  default `FETCH` type, which replaces the entire fetch plan for the query, silently
+  turning `Issue.repo`/`author` (plain `@ManyToOne`, eager by JPA default) into
+  unfetched proxies; fixed by using `EntityGraphType.LOAD`, which only adds the named
+  paths (`labels`/`assignees`/`milestone`, the only lazy-by-default associations) and
+  leaves every other attribute's own mapped fetch type alone. (2) A real, separate bug
+  the flag flip exposed rather than caused: `Issue.removeLabel`/`removeAssignee`
+  called `Set.remove(entity)`, relying on default object-identity `equals`. That
+  happened to work under `open-in-view=true` (one Hibernate session for the whole
+  request, so its first-level cache deduplicated same-row entities across separate
+  repository calls) and silently no-ops now that each repository call gets its own
+  session. Fixed by matching on `id` instead; a new regression test
+  (`removingALabelActuallyPersistsAcrossSeparateRequests`) covers it, since the
+  existing assignee-removal test happened to already catch its own version of the bug
+  but nothing had covered label removal specifically. After both fixes, every other
+  controller was smoke-tested live against the running app (issues, PRs, single-PR,
+  activity feed, tree/blob/commits/commit, access management, PR merge, comments,
+  org/team creation, search) before considering the flag safe.
+- **`DiffView` virtualizes per file, not as one continuous list spanning every changed
+  file's rows.** The frontend spec's stated ideal is one virtualized list across the
+  whole diff. Per-file virtualization already delivers the real win (a single huge
+  file no longer costs O(file length) to render) without the added complexity of a
+  heterogeneous virtualized list mixing file-header rows and diff rows across file
+  boundaries. Named as a real tradeoff in `DiffView`'s own doc comment: a PR with very
+  many small files benefits less than one with one very large file.
+- **`react-window` (not a hand-rolled windowing scheme) for `CodeViewer`/`DiffView`.**
+  A hand-rolled scroll-position-based slice would duplicate what a small, focused,
+  well-known library already does correctly (overscan, resize handling, imperative
+  scroll-to-row), for no benefit over adding the dependency.
+- **Client-side write islands (`MergeBox`, `ReviewComposer`, `CommentComposer`,
+  `AccessSettingsPanel`, `SidebarMeta`, org/repo creation forms) were not migrated to
+  session+CSRF cookies.** They continue to use the existing, already-verified
+  PAT/localStorage flow. The actual gap that mattered was Server Component reads (a
+  private repo's owner could never see it through any server-rendered page, since a
+  Server Component runs on the Next.js server and cannot read the browser's
+  localStorage); that is fixed for every read path via `lib/api.ts` forwarding the
+  session cookie. Fully migrating every write island too is a reasonable follow-up,
+  deliberately not done in this pass to avoid destabilizing flows the first build
+  already got working and verified.
+- **CSRF is the double-submit cookie pattern (a second, readable `cairn_csrf` cookie
+  echoed back as a header), not server-side per-request token storage.** Stateless to
+  verify (just compare the header to the session's own minted value), and only
+  matters for session-cookie-authenticated requests: a personal access token over
+  Basic auth is never attached to a request automatically by a browser, so it carries
+  no ambient-credential forgery risk for CSRF to defend against.
+- **Sessions are in-memory (`SessionStore`), like `InMemoryActivityFeed`.** A restart
+  logs everyone out; the same overall scope tradeoff as this project's H2-in-memory
+  persistence generally, not a shortcut specific to auth.
+- **Added `org.apache.httpcomponents.client5:httpclient5` as a test-only dependency.**
+  `TestRestTemplate`'s default JDK-based `HttpURLConnection` throws
+  `HttpRetryException` ("cannot retry due to server authentication, in streaming
+  mode") on a POST that receives a 401 response with a body, since it unconditionally
+  attempts its own auth-retry flow on any 401 regardless of whether the app set a
+  `WWW-Authenticate` header. This is a real, previously-latent risk this round's own
+  new tests hit (`LoginControllerTest`'s wrong-password case); every prior 401-on-POST
+  test in the codebase happened to return an empty body, which doesn't trigger it.
+  Spring Boot auto-detects a real HTTP client on the classpath and prefers it over the
+  JDK's, which fixes the underlying issue rather than working around it by stripping
+  the response body.
+- **`REBASE` follows only the first-parent chain and is all-or-nothing on conflict.**
+  Matches this project's existing merge/blame scope boundaries (`Blame`, `TreeMerger`
+  both make the same call): a merge commit inside the rebased range is flattened into
+  one ordinary commit rather than preserved as a merge, and any conflict aborts the
+  whole rebase with no partial history written, since there is no working directory on
+  the server to pause a real interactive rebase in.
+- **The `compare` endpoint's route is `/compare/{base}...{head}` with bare ref names
+  (not `refs/heads/...`), matching every other read endpoint's `{ref}` convention.**
+  A full ref name contains `/`, which does not fit cleanly into one path segment
+  alongside a second path variable; the frontend strips `refs/heads/` before calling
+  it.
+
+## Gap-closure round: P1 (named PRD features that had quietly been dropped)
+
+- **Labels/milestones/assignees were built for issues only, not pull requests.** A
+  deliberate scope cut, made explicitly to avoid repeating the exact "API with no UI
+  behind it" gap this whole round exists to close: building the domain/API for PRs too
+  under time pressure and running out of room for its UI would have been the same
+  mistake in miniature.
+- **Label/milestone mutation endpoints are gated at `triage`, not `write`.** Matches
+  the security doc's own definition of the role ("manage issues and PRs without code
+  write") and real GitHub's equivalent behavior.
+- **Blame follows only the first-parent chain, the same scope boundary as `REBASE`
+  above (written earlier, same reasoning): a merge's second-parent history is not
+  traced, and a rename is an unrelated delete-and-add**, consistent with
+  `TreeMerger`'s own documented rename limitation from M2.
+- **Syntax highlighting is per-line, not per-file.** Highlighting the whole file as
+  one token stream and splitting the resulting HTML by newline would corrupt whenever
+  a token (an unterminated multi-line comment or string) spans a line boundary, since
+  an opening `<span>` would not close on the same line it started. Per-line
+  highlighting loses that cross-line context in exchange for correctness of the
+  line-by-line rendering every other part of the app already assumes (line numbers,
+  the blame gutter, review line-anchoring). Named in `lib/highlight.ts`'s own doc
+  comment.
+- **The trigram index rebuilds off the request thread when the branch tip moves,
+  returning an "indexing" state rather than blocking or serving stale results.**
+  Neither of the architecture doc's two named options (synchronous rebuild on
+  receive-pack, which slows every push; an asynchronous job-worker queue, not built)
+  — a third, simpler middle ground that still gives the frontend spec's named
+  indexing state real meaning instead of a state that can never actually trigger.
+- **Trigram search bounds indexing explicitly: files over 512KB are skipped, and a
+  repo stops indexing past 20,000 files.** Named per the security doc's requirement
+  that search be bounded, rather than silently truncating with no signal.
+
+## Gap-closure round: P0 (reachability)
+
+- **`git status` deliberately has no HTTP/UI surface.** Cairn's server-side repos are
+  bare (no working tree; `RepositoryRegistry`'s own doc comment says so), and `git
+  status` is inherently a working-directory concept. A real `git` client already
+  answers it correctly, unassisted, against any real clone from Cairn; building a
+  redundant server-side surface for a question the client already answers would be
+  scope for its own sake.
+- **Account signup mints tokens by authenticating with the real password over Basic
+  auth, once, specifically for that one endpoint** (`POST /api/users/{username}/tokens`),
+  rather than building full session/cookie login as part of this same P0 item. Real
+  session login was still a named P2 gap at the time; this was the minimum needed to
+  let a signup flow end in a working, usable account rather than a dead end.
+- **CORS allows one configurable origin (`cairn.web-origin`, default
+  `http://localhost:3000`), not a wildcard**, since credentials (cookies, later) are
+  allowed, and a wildcard `Access-Control-Allow-Origin` cannot be combined with
+  `Access-Control-Allow-Credentials: true` per the CORS spec itself, not just this
+  project's own preference.
+- **A repo's "last-admin guard" (frontend spec 5.9) has no teeth to add, and none were
+  added.** `Repo.ownerUser`/`ownerOrg` always implies admin and is immutable through
+  the access-management API; there is no grant row for the owner to remove in the
+  first place, so the UI simply never offers one, which already satisfies the spec's
+  intent (never let a repo's admin trail off to zero) without dead defensive code
+  that could never actually trigger under this domain model.
+- **Team-to-repo grants are managed in `AccessController` (repo-scoped), not
+  `OrgController` (org-scoped)**, even though both touch `Team`. A grant is fundamentally
+  a fact about the repo (who can push it), not the org; keeping it next to collaborator
+  grants (the other grant source) means one controller owns "everything that changes a
+  repo's effective-role inputs."
+- **Restored `docs/` from the identical root-level copies rather than treating its
+  absence as a blocker.** The four spec files existed at the project root the whole
+  time (apparently the originals, from before a `docs/` copy was made and later lost
+  from disk with no git history to recover it from); confirmed byte-identical before
+  proceeding, consistent with investigating unfamiliar state rather than assuming it
+  was safe to route around.
+- **This round's audit was done by independently reading the code against the PRD,
+  not by trusting the first build's own `SUMMARY.md`/`DECISIONS.md`.** That is exactly
+  what surfaced the under-reporting itself (access management's real gap was the
+  missing write API, not just a missing UI, which the first build's own account of its
+  gaps did not say) — a self-report written by the same effort that built the code is
+  evidence of intent, not proof of what actually shipped.
+
 ## M1: object store and DAG
 
 - **Object hashing uses SHA-1 and Git's exact on-wire encoding, not a modern hash.**

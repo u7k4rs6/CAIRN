@@ -1,114 +1,85 @@
 # Cairn: build summary
 
 Cairn is a self-hosted Git hosting and collaboration platform, built as a portfolio and
-interview artifact. All nine milestones from the build brief are complete: a real
-content-addressable version control engine (`cairn-vcs`), a Git-over-HTTP transfer
-layer with real smart-negotiation (`cairn-transfer`), a permissioned collaboration
-platform (`cairn-api`), and a web UI (`web`). The engine is cross-checked against a
-real `git` binary throughout, not just against its own tests.
+interview artifact. All nine milestones from the original build brief were completed
+first, then a gap-closure audit and round of work closed most of what that first pass
+under-reported or quietly dropped. The engine is cross-checked against a real `git`
+binary throughout, not just against its own tests, and every controller endpoint added
+in the gap-closure round was verified live against a running server (`curl` and, where
+relevant, a real browser), not just by its own test suite.
 
-## What's built, milestone by milestone
+## FR-by-FR completion audit
 
-### M1: object store and DAG
-Content-addressable `Blob`/`Tree`/`Commit`/`Tag` objects, hashed with Git's exact
-on-wire encoding (SHA-1 over `"<kind> <len>\0<body>"`). `ObjectStore` (Strategy) with
-a loose-object implementation. `FileRefStore`, `Head`, a naive `RevWalk`, an `Index`
-staging area, and a `Repository` porcelain facade (`init`/`add`/`commit`/`log`).
-Blob and tree hashes verified byte-for-byte against `git hash-object` / `git write-tree`.
+Per the gap-closure brief's completion gate: every functional requirement in the PRD,
+its status, whether a real user can reach it end to end (not just "a domain model and
+passing unit tests exist for it"), and the test id that proves it. A requirement not
+reachable through a real endpoint and, where the frontend spec calls for one, a UI
+screen is reported **not done** or **partial** here explicitly, even where the
+underlying engine or domain work is real and correct.
 
-### M2: diff and merge
-`MyersDiff` (linear-space middle-snake divide-and-conquer), validated against a
-brute-force LCS oracle over 800+ randomized cases. `FileMerge` (diff3-style hunk-level
-three-way text merge). `TreeMerger`/`TreeFlattener` (tree-level three-way merge with
-per-path conflict detection). `MergeEngine` (fast-forward detection, recursive
-merge-base folding for criss-cross history). `Repository` gained
-`createBranch`/`checkout`/`diff`/`merge`. End-to-end tests cover a clean merge, a
-fast-forward, a genuine conflict (reported, not lost), and a real criss-cross history
-resolved via recursive merge base.
+| FR | Status | Reachable end to end | Test id |
+|---|---|---|---|
+| FR-VC-1 (blobs, content-addressed, dedup) | Done | Yes — every `commit`/`git push` | `GitObjectTest`, `LooseObjectStoreTest.puttingIdenticalContentTwiceStoresOnce` |
+| FR-VC-2 (tree object) | Done | Yes — same paths; hash matches `git write-tree` | `GitObjectTest`, `RepositoryTest.nestedPathsBuildIntermediateTrees` |
+| FR-VC-3 (commit object) | Done | Yes | `RepositoryTest.addAndCommitCreatesReachableObjects`, `.secondCommitRecordsFirstAsParent`, `GitObjectTest` (gpgsig round-trip) |
+| FR-VC-4 (refs/HEAD) | Done | Yes — `Repository.createBranch/checkout`; a real `git clone` shows `HEAD`/`symref` | `RepositoryTest.initCreatesAnEmptyRepositoryPointingAtMain`, `GitHttpIntegrationTest` |
+| FR-VC-5 (packfiles, bounded delta) | Done | Yes — any real `git push`/`fetch` | `PackRoundTripTest` (cross-checked against `git index-pack`/`fsck`/`verify-pack`) |
+| FR-VC-6 (generation numbers) | Done | Yes, transparently — accelerates ancestry/merge-base on every merge and PR merge | `GenerationNumbersTest`, `AncestryGenerationNumberTest` (instrumented proof) |
+| FR-VC-7 (log/diff, Myers) | Done | Yes — `GET .../commits/{ref}`, `.../commit/{sha}`; commit history and diff pages | `MyersDiffTest` (800+ oracle cases), `TreeDiffTest`, `RepoContentControllerTest.commitsReturnsHistory` |
+| FR-VC-8 (merge base + three-way merge) | Done | Yes — `Repository.merge`; PR merge (all three strategies) | `RepositoryMergeTest`, `FileMergeTest`, `PullRequestServiceTest` |
+| FR-XFER-1 (fetch sends only missing objects) | Done | Yes — real `git clone`/`fetch` | `GitHttpIntegrationTest.pushCloneAndFetchRoundTripThroughARealGitClient`, `UploadPackHandlerTest` |
+| FR-XFER-2 (push validated per ref, atomic) | Done | Yes — real `git push` | `GitReceivePackAuthorizerTest`, `GitHttpIntegrationTest.anonymousPushIsRejectedWithAnAuthChallenge`, `ReceivePackHandlerTest` |
+| FR-REPO-1 (create repo with visibility) | Done | Yes — `POST /api/repos` (user- or org-owned); UI at `/repos/new` | `OrgAndAccessControllerTest.anOrgAdminCanCreateAnOrgOwnedRepoButAStrangerCannot` |
+| FR-REPO-2 (collaborators + team grants) | Done (gap-closure) | Yes — `POST/DELETE .../access/collaborators`, `.../access/teams`; UI at `/{owner}/{repo}/settings/access`, org/team creation at `/orgs/new`, `/orgs/{org}/teams` | `OrgAndAccessControllerTest` (9 cases), `TeamAccessEndToEndTest` (real `git push` by a team member with no direct grant) |
+| FR-REPO-3 (effective role = max of grants) | Done | Yes — underlies every authorization check | `DefaultPermissionResolverTest` (8 cases incl. cyclic team, depth cap, "max wins") |
+| FR-REPO-4 (protected branch push rejected) | Done | Yes — branch protection UI at settings/access; enforced on real push and PR merge | `GitReceivePackAuthorizerTest`, `PullRequestServiceTest.branchProtectionRequiringApprovalBlocksAnUnapprovedMerge` |
+| FR-COLLAB-1 (open issue) | Done | Yes — `POST .../issues`; UI at `/{owner}/{repo}/issues` | `IssueControllerTest` |
+| FR-COLLAB-2 (PR proposes merge, lifecycle state) | Done | Yes — `POST .../pulls`, `GET .../pulls/{number}`; UI at `/pull/{n}` | `PullRequestServiceTest`, `PullRequestStateTest`, `PullRequestControllerTest` |
+| FR-COLLAB-3 (review, attached to lines) | **Partial** | API and domain: yes (`Review.path`/`line`, `POST .../reviews` accepts them). UI: **no** — `ReviewComposer` only ever submits a body-level review; there is no way for a real user to click a diff line and attach a comment to it, even though `DiffView` renders the diff the frontend spec says should anchor to | No test exercises a review with `path`/`line` populated; the UI path plainly doesn't exist. Named here rather than left implied by the "done" domain model |
+| FR-COLLAB-4 (merge commit / squash / rebase) | Done (rebase added, gap-closure) | Yes — `POST .../pulls/{n}/merge`; UI `MergeBox` offers all three | `PullRequestServiceTest.rebaseStrategyReplaysTheSourceCommitOntoAMovedTargetTip`, `.squashStrategyProducesASingleParentCommit`, `RebaseTest` (5 cases) |
+| FR-BROWSE-1 (tree/file, syntax highlighting, blame) | Done (highlighting + blame added, gap-closure) | Yes — `GET tree/blob/blame`; blob page with `CodeViewer` (highlight.js) and a Blame toggle | `RepoContentControllerTest.blameAttributesEveryLineToTheSeedCommit`, `BlameTest` (5 cases) |
+| FR-BROWSE-2 (commit history + diff) | Done (compare endpoint added, gap-closure) | Yes — `GET commits/{ref}`, `commit/{sha}`, `compare/{base}...{head}`; commit pages + PR Files-changed/Commits tabs | `RepoContentControllerTest.commitDiffShowsAddedFilesForARootCommit`, `.compareReturnsTheDiffAndCommitsBetweenTwoRefs` |
+| FR-SEARCH-1 (trigram code search) | Done (added, gap-closure) | Yes — `GET .../search?q=`; search results page with the indexing/too-short/no-results states | `TrigramIndexTest` (7 cases incl. false-positive rejection), `SearchControllerTest` (5 cases incl. masked-private, indexing state) |
 
-### M3: generation numbers
-`GenerationStore` (Strategy) + `FileGenerationStore`. `Ancestry` rewritten on
-generation numbers: O(1) negative ancestry, a pruned positive walk, a merge-base fast
-path for the direct-ancestor case, with the general criss-cross case falling back to
-M2's proven-correct full enumeration (an honest, stated complexity boundary, not an
-overclaimed win). Instrumented proof: negative ancestry on a 1000-commit chain touches
-at most 2 objects.
+**PRD-named items without their own FR number**, also part of the completion gate in
+spirit:
 
-### M4: packfiles and delta
-`DeltaCodec` implements Git's real delta instruction format. `PackWriter`/`PackReader`
-implement Git's actual packfile format (`PACK` magic, version 2, REF_DELTA, zlib
-deflate, trailing SHA-1 checksum, bounded delta-chain depth). Cross-checked against
-real `git`: a Cairn-written pack (including a 5-deep delta chain) was accepted by
-`git index-pack --stdin` and passed `git fsck --full` and `git verify-pack -v` with the
-expected chain lengths.
+| Item | Status | Reachable end to end | Test id |
+|---|---|---|---|
+| Labels, milestones, assignees (Tier 2) | Done for issues; **not built for pull requests** (a deliberate scope cut, see below) | Yes for issues — `POST/DELETE .../labels`, `.../assignees`, `PUT .../milestone`; `FilterBar` + `SidebarMeta` in the issue UI | `IssueControllerTest` (9 cases) |
+| Access-management UI (Tier 3) | Done (gap-closure) | Yes — `/{owner}/{repo}/settings/access` | `OrgAndAccessControllerTest` |
+| User/org profile page `/{owner}` (frontend spec route table) | **Not built** | No — the route has no page; `RepoHeader`'s owner breadcrumb links to it and 404s | none |
+| SSH transport (security doc, section 2.4) | **Not built** | No — only Git-over-HTTP exists; no SSH server, no public-key registration | none |
 
-### M5: transfer with negotiation
-`PktLine` framing, `RefAdvertisement` (with `HEAD`/`symref` so a real clone knows what
-to check out), `UploadPackHandler` (want/have negotiation) and `ReceivePackHandler`
-(ref-update commands, atomic writes). A minimal Spring Boot app exposes
-`info/refs`/`git-upload-pack`/`git-receive-pack`. **Proven with a real installed `git`
-binary**, not just unit tests: clone, push, clone, a second push, then fetch + merge,
-finishing with `git fsck --full`. Found and fixed a real interop bug this way: this
-environment signs commits by default, and unrecognized commit headers (`gpgsig`) were
-being silently dropped, corrupting the recomputed hash on round-trip.
+## What was added in the gap-closure round
 
-### M6: permissions
-Domain model (`User`, `Organization`, `Team` as a Composite hierarchy, `Repo`,
-`CollaboratorGrant`, `TeamGrant`, `BranchProtectionRule`, `PersonalAccessToken`).
-`DefaultPermissionResolver` implements the security doc's `effective_role` algorithm
-verbatim, against a swappable `GrantLookup` (Repository pattern). `ReceivePackHandler`
-gained a pluggable `RefUpdateAuthorizer`: every ref update is authorized before any are
-written, one denial rejects the whole push atomically. `GitHttpController` challenges
-anonymous callers with 401 and masks denied authenticated callers behind 404. Verified
-against a real git client, which is how a real bug was found: git only sends Basic auth
-after a 401 challenge, not preemptively from a credentialed URL.
+An audit against `docs/01_PRD.md` found that the first build's own `SUMMARY.md`
+under-reported its gaps: it implied access management was missing only a UI, when the
+org/team/grant REST API didn't exist at all, and several PRD-named features (search,
+blame, labels, rebase) had quietly been dropped without a line in `DECISIONS.md`. This
+round closed those, prioritized P0 (reachability) → P1 (named PRD features) → P2
+(correctness and quality), each committed separately:
 
-### M7: collaboration
-`PullRequestState`/`IssueState` as enum-based State pattern instances.
-`PullRequestService.merge` wires `PermissionResolver`, `BranchProtectionRule`,
-`MergeEngine`, and the state machine together, supporting `MERGE_COMMIT` and `SQUASH`
-strategies. REST surface for issues (+ comments) and pull requests (+ reviews, + merge).
-Tests cover the PRD's acceptance criterion directly: insufficient role blocks merge,
-a clean merge produces a real commit and transitions state, merging twice is rejected
-by the state machine, and branch protection blocks merge until approved.
-
-### M8: web UI
-`RepoContentController` adds tree/blob/commit-history/commit-diff read endpoints,
-gated on read access like everything else. A Next.js 16 (App Router, React 19,
-Tailwind v4) frontend: repo browsing at any ref/path, commit history, commit diffs,
-issue list/detail, PR list/detail with review and merge actions. Server Components
-fetch directly from the API; a few client islands (auth, merge, review, comment) hold
-the write actions. `DevDataSeeder` (a `seed` Spring profile) seeds a demo repo, issue,
-and PR so the UI has something real to browse. Verified end to end against a running
-backend with `curl` and by loading every page.
-
-### M9: paper-only stretch, plus a real Observer
-Rather than leave Observer paper-only along with the rest of M9 (it was found to be
-entirely unimplemented against the build brief's five named patterns), it's built as a
-small real feature: `ActivityListener`/`ActivityPublisher`/`ActivityEvent`, two
-independent listeners (`InMemoryActivityFeed`, `LoggingActivityListener`), wired into
-issue/PR creation and PR merge, with a read-gated `GET .../activity` endpoint. The
-remaining stretch items (trigram search, partial clone, reachability bitmaps, webhook
-delivery, sharding) stay paper-only; see "Known gaps" below for their design writeups.
-
-## Test status
-
-| Module | Tests | Status |
-|---|---|---|
-| `cairn-vcs` | 65 | passing |
-| `cairn-transfer` | 10 | passing |
-| `cairn-api` | 46 | passing |
-| `web` | none (no automated suite) | `npm run build` succeeds; manually verified end to end |
-
-Total: 121 automated JVM tests, all green. Several of the most important ones are
-real-git-binary integration tests (`GitHttpIntegrationTest`), not mocks of git's
-behavior: an actual `git clone`/`push`/`fetch`/`merge`/`fsck` round trip against the
-running embedded server.
+- **P0 — org/team/grant API and UI.** `OrgController`, `AccessController`; the
+  `/settings/access`, `/orgs/new`, `/orgs/{org}/teams` screens.
+- **P0 — account signup, token minting, and CORS.** `AccountController`
+  (`PasswordHasher` existed, wired into zero endpoints); a real CORS configuration
+  (nothing existed before, silently breaking every browser-based client fetch, not just
+  new ones — `MergeBox`/`ReviewComposer`/`CommentComposer` from the first build were
+  affected too, never caught because M8's own verification used `curl`).
+- **P0 — `git status`.** `Repository.status()` in `cairn-vcs`, the one Tier 1 porcelain
+  command missing. Deliberately has no HTTP/UI surface: Cairn's server-side repos are
+  bare (no working tree), and `git status` is inherently a working-directory concept a
+  real `git` client already answers correctly, unassisted, against any real clone.
+- **P1 — trigram code search, blame, syntax highlighting, labels/milestones/assignees.**
+  See the FR table above.
+- **P2 — REBASE, PR completeness, sessions, virtualization, `open-in-view`.** See the
+  FR table and "Decisions" below.
 
 ## Design patterns, where they pay rent
 
 - **Strategy:** `ObjectStore` (loose/packed), `DiffStrategy` (Myers), `PermissionResolver`,
-  `MergeStrategy` (merge commit/squash).
+  `MergeStrategy` (merge commit/squash/rebase).
 - **State:** `PullRequestState`, `IssueState`: enum constants that each override only
   the transitions legal from that state, so `MERGED` is structurally terminal.
 - **Composite:** `Team`, nested arbitrarily deep, walked with a depth cap and visited
@@ -119,6 +90,23 @@ running embedded server.
 - **Repository:** Spring Data JPA repositories for persistence generally; a narrow
   hand-rolled `GrantLookup` interface specifically for `PermissionResolver`, tested
   with a zero-Spring in-memory fake.
+
+## Test status
+
+| Module | Tests | Status |
+|---|---|---|
+| `cairn-vcs` | 92 | passing |
+| `cairn-transfer` | 10 | passing |
+| `cairn-api` | 85 | passing |
+| `web` | none (no automated suite) | `npm run build` succeeds; manually verified end to end against a running backend |
+
+Total: 187 automated JVM tests, all green (`./gradlew clean test`). Several of the most
+important ones are real-binary/real-client integration tests, not mocks: `git clone`/
+`push`/`fetch`/`merge`/`fsck` against the running embedded server
+(`GitHttpIntegrationTest`), a real `git push` by a team member who only holds a team
+grant (`TeamAccessEndToEndTest`), and a real signup → login → session cookie →
+server-rendered private-repo page proof (verified live; see `LoginControllerTest` for
+the automated half).
 
 ## Build, test, and run
 
@@ -139,20 +127,24 @@ cd web && npm install && npm run dev
 ```
 
 The web UI is at `http://localhost:3000`. With the `seed` profile, browse
-`http://localhost:3000/acme/demo` directly, or push your own repo:
+`http://localhost:3000/acme/demo` directly, sign up a new account at `/signup`, or push
+your own repo:
 
 ```
 git remote add origin http://localhost:8080/<owner>/<repo>.git
 git push origin main
 ```
 
+Session cookies are not marked `Secure` by default (`cairn.cookie-secure=false`), so
+login works over plain local HTTP; set it to `true` behind real HTTPS.
+
 ## Decisions and assumptions
 
 Every judgment call is recorded with its rationale in `DECISIONS.md`, organized by
-milestone, newest first. The recurring theme across all nine milestones: whenever a
-milestone's correctness claim could be checked against the real thing (real `git`,
-a real HTTP round trip, a real browser client), it was, and several real bugs were
-only found this way, not by unit tests written against the code's own assumptions:
+milestone (and, for the gap-closure round, by work item), newest first. The recurring
+theme across the whole project: whenever a claim could be checked against the real
+thing (real `git`, a real HTTP round trip, a real browser client, the full test suite
+after a risky change), it was, and real bugs were repeatedly only found this way:
 
 - **M1/M5:** Git's exact object encoding and an unrecognized `gpgsig` commit header
   silently dropped and corrupting round-trip hashes.
@@ -164,27 +156,50 @@ only found this way, not by unit tests written against the code's own assumption
 - **M8:** Jackson serializing plain-accessor domain classes as `{}`, the fix then
   needing `@JsonIgnore` on `passwordHash`/`tokenHash`, a brand-new empty repo crashing
   instead of rendering empty, and React's reserved `ref` prop name.
+- **Gap-closure:** no CORS configuration existed at all (broke every browser fetch,
+  old and new); `docs/` had gone missing from disk between sessions with no git history
+  to recover it from (repopulated from identical root-level copies); a JDK
+  `HttpURLConnection` quirk (a POST receiving a 401 with a body throws instead of
+  returning the response) fixed by adding a real HTTP client for tests;
+  `@EntityGraph`'s default `FETCH` type silently turned already-eager associations
+  lazy, caught by the full test suite; `Issue.removeLabel`/`removeAssignee` relied on
+  object-identity `Set.remove`, which only worked by accident under
+  `open-in-view=true`'s shared session and broke as soon as it was turned off — fixed
+  by matching on id, with a new regression test.
 
-`PROGRESS.md` tracks milestone-by-milestone status and test counts as the project was
-built; `DECISIONS.md` is the full assumptions-and-rationale log.
+`PROGRESS.md` tracks status and test counts as the project was built, including the
+gap-closure round; `DECISIONS.md` is the full assumptions-and-rationale log.
 
 ## Known gaps and next steps
 
-**Scope cuts made under time pressure, most valuable first:**
+**What's left after the gap-closure round, most valuable first:**
 
-- **Trigram code search (PRD Tier 3 / FR-SEARCH-1) is not built.** Design: tokenize
-  every blob's content into overlapping character trigrams, maintain an inverted index
-  (trigram to posting list of blob ids/positions), and answer a substring query by
-  intersecting the posting lists for the query's trigrams, then verifying each
-  candidate against the actual content (cheap, since the index has already narrowed
-  the candidate set from "every blob" to "blobs sharing all the query's trigrams").
-  Cost: O(total code) to build the index, then a query is near
-  O(intersected postings + candidate verification) instead of an O(total code) grep
-  per query (architecture doc, section 10). The real cost is index staleness on every
-  push, which needs either synchronous index update on receive-pack (simple, slows
-  pushes) or an asynchronous job (architecture doc's job-worker tier, not built).
-  Highest-value next step of everything listed here, since it is the one item the PRD
-  scoped into v1 rather than marking paper-only.
+- **Line-anchored review comments have no UI** (FR-COLLAB-3, found during this
+  round's own audit). The API and domain fully support a review's `path`/`line`; the
+  frontend's `ReviewComposer` never offers a way to set them. Highest-value remaining
+  item: everything else in the flagship PR screen works, this is the one piece of the
+  frontend spec's "Files changed" tab interaction (`click a line to attach a comment`)
+  that isn't wired up.
+- **Pull requests have no labels/milestones/assignees**, only issues do (a deliberate
+  cut this round, made explicitly to avoid repeating the exact "API with no UI behind
+  it" gap this whole round exists to close, rather than build the API for PRs too and
+  run out of time before its UI).
+- **Client-side write islands (`MergeBox`, `ReviewComposer`, `CommentComposer`,
+  `AccessSettingsPanel`, etc.) still use the localStorage-PAT flow**, not the new
+  session+CSRF cookies. Sessions now work end to end for every Server-Component read
+  path (the actual gap that mattered: a private repo's owner couldn't see it through
+  any server-rendered page before this round); migrating the write islands too is a
+  reasonable follow-up, not done here to avoid destabilizing already-verified flows.
+- **No `/{owner}` user/org profile page.** Named in the frontend spec's route table,
+  never built in either round; `RepoHeader`'s own owner breadcrumb link 404s.
+- **No SSH transport** (security doc, section 2.4). Only Git-over-HTTP exists; no SSH
+  server, no public-key registration, no `settings/keys` UI. Not part of either round's
+  scope; the PRD does not explicitly mark it paper-only, so it is named here as an
+  honest gap rather than implied out of scope.
+- **`DiffView` virtualizes per file, not as one continuous list across every changed
+  file's rows** (a real, deliberate tradeoff from this round's virtualization work, not
+  an oversight — see `DiffView`'s own doc comment). A PR with very many small files
+  benefits less than one with one very large file.
 - **Partial clone / sparse checkout (paper-only per PRD).** Real Git's approach: a
   "promisor remote" lets a clone fetch only commits and trees up front, deferring blob
   fetches until a file is actually read (a filter spec like `blob:none`). Cairn's
@@ -207,8 +222,7 @@ built; `DECISIONS.md` is the full assumptions-and-rationale log.
   payload (HMAC over the body with a per-webhook secret, verified by the receiver),
   with retry/backoff on failure and a dead-letter path after repeated failures. Not
   built because HTTP delivery, retry semantics, and signing are real additional
-  machinery beyond the Observer wiring itself, which is what this milestone was
-  actually testing.
+  machinery beyond the Observer wiring itself, which is what M9 was actually testing.
 - **Repository sharding (paper-only, HLD topic per PRD).** Repos are independent
   object-storage namespaces (each `owner/name` already maps to its own on-disk
   directory via `RepositoryRegistry`), so they shard naturally by repo id or name
@@ -218,22 +232,6 @@ built; `DECISIONS.md` is the full assumptions-and-rationale log.
   storage it describes.
 - **A minimal CI trigger and project boards/wikis/discussions** are out of scope for
   v1 per the PRD's own "out of scope" list (section 10); not attempted.
-- **`REBASE` merge strategy is not implemented** (M7 gap): `MERGE_COMMIT` and
-  `SQUASH` both reduce to "compute one merged tree, write one commit"; a real rebase
-  needs to replay each source commit individually against a moving target, re-running
-  a three-way merge per replayed commit. Named as a gap in M7's `DECISIONS.md` entry.
-- **No `GET .../pulls/{number}` single-resource endpoint** (M8): the frontend fetches
-  the list and finds the matching PR by number. Fine at this scale; would need
-  revisiting if the list payload ever needs to shrink.
-- **`spring.jpa.open-in-view` stays at its default (`true`)** (M8): several
-  controllers rely on lazy JPA association access during response serialization.
-  Disabling it safely needs an audit of every such access first, which time did not
-  allow; left as a known gap rather than risk trading one bug for another.
-- **Auth in the web UI is a username + personal access token in `localStorage`**, not
-  a real session/cookie/CSRF flow, matching what the backend actually supports
-  (Basic auth with a PAT).
-- **`DiffView` renders every line unvirtualized** (M8): correct at demo scale, not
-  representative of what a real host needs at file-scale diffs.
 
 ## Repository layout
 

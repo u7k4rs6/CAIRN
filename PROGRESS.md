@@ -1,9 +1,61 @@
 # Progress
 
 ## Current milestone
-All milestones (M1 to M9) complete.
+All milestones (M1 to M9) complete. Gap-closure round (audit against `docs/01_PRD.md`
+plus a completion brief) also complete: P0 (reachability), P1 (named PRD features), and
+P2 (correctness and quality) all done. See `SUMMARY.md`'s FR-by-FR audit for the
+authoritative per-requirement status and what's still genuinely outstanding.
 
-## Done
+## Gap-closure round (done, newest first within each priority)
+
+- **P2:** `spring.jpa.open-in-view=false`, with `IssueJpaRepository`'s `@EntityGraph`
+  fix (using `LOAD` type, not the default `FETCH`, after the default silently broke
+  `Issue.repo`/`author` serialization) and a real bug the flag flip exposed
+  (`Issue.removeLabel`/`removeAssignee` relying on object-identity `Set.remove`,
+  fixed to match by id, with a new regression test).
+- **P2:** `CodeViewer` and `DiffView` virtualized with `react-window` (per-file for
+  `DiffView`, a named tradeoff, not an oversight).
+- **P2:** Real server-side sessions (`SessionStore`, `LoginController`, `CsrfFilter`),
+  fixing the actual gap behind "auth is localStorage-only": a Server Component has no
+  way to read localStorage, so every SSR page was always anonymous, meaning a private
+  repo's own owner could never see it through a server-rendered page. `lib/api.ts` now
+  forwards the session cookie to every Server Component fetch. Client write islands
+  intentionally still use the proven PAT flow (see `SUMMARY.md`'s known gaps).
+- **P2:** `REBASE` merge strategy (`cairn-vcs`'s `Rebase`, real per-commit replay) and
+  PR completeness (`GET .../pulls/{number}`, `GET .../compare/{base}...{head}`, PR
+  Files-changed/Commits tabs).
+- **P1:** Labels, milestones, and assignees on issues (`Label`, `Milestone` entities;
+  `LabelController`, `MilestoneController`; `IssueController` filtering; `FilterBar` +
+  `SidebarMeta` in the UI). Deliberately not built for pull requests this round.
+- **P1:** Blame (`cairn-vcs`'s `Blame`, real history-walking line attribution, not a
+  stub) and syntax highlighting (`highlight.js`, per-line, in both `CodeViewer` and
+  `DiffView`).
+- **P1:** Trigram code search end to end: `cairn-vcs`'s `TrigramIndex`,
+  `RepoSearchIndexService` (async per-repo index, rebuilt when the branch tip moves),
+  `SearchController`, and a search results page with the frontend spec's indexing/
+  too-short/no-results states.
+- **P0:** `git status` (`Repository.status()` in `cairn-vcs`), the one missing Tier 1
+  porcelain command.
+- **P0 (discovered mid-round, more foundational than the rest):** account signup and
+  personal-access-token minting (`AccountController`) — before this, the only account
+  that could ever exist was `DevDataSeeder`'s one hardcoded demo user, since
+  `PasswordHasher` existed fully unit-tested but was wired into zero endpoints. Also
+  fixed: no CORS configuration existed anywhere, silently breaking every browser-based
+  fetch this app makes, including the first build's own `MergeBox`/`ReviewComposer`/
+  `CommentComposer`, never caught because M8's verification used `curl`.
+- **P0:** org/team/grant REST API and UI (`OrgController`, `AccessController`,
+  `/settings/access`, `/orgs/new`, `/orgs/{org}/teams`) — the domain model and
+  permission-resolution algorithm were fully built and unit-tested in M6, but
+  completely unreachable by any real user action; the first build's own `SUMMARY.md`
+  under-reported this as a UI gap, when the write API didn't exist at all.
+
+Also restored `docs/` (the four source-of-truth specs), found missing from disk with
+no git history to recover it from at the start of this round; repopulated from the
+identical root-level copies. This whole round's work is also the project's first git
+history: no repository existed on disk before it (a `.gitignore` and initial commit
+capturing the M1-M9 state as delivered was the first commit).
+
+## Done (M1-M9, as originally built)
 - Gradle multi-module scaffold: `cairn-vcs`, `cairn-transfer`, `cairn-api`, `settings.gradle`, root `build.gradle`.
 - `cairn-vcs` (M1): `Blob`, `Tree`, `Commit`, `Tag` objects with Git-compatible SHA-1 encoding;
   `ObjectId`, `ObjectKind`, `FileMode`, `TreeEntry`, `PersonIdent`; `GitObjects` deserialization factory.
@@ -145,10 +197,21 @@ All milestones (M1 to M9) complete.
   of most of them as paper-only; code search is named honestly as a scope cut rather
   than a spec-sanctioned deferral (see DECISIONS.md).
 
-## Test status
+## Test status (as originally built, M1-M9 only)
 `cairn-vcs`: 65 tests, `cairn-transfer`: 10 tests, `cairn-api`: 46 tests. All passing (`gradle test`).
 `web`: `npm run build` succeeds (no automated test suite; verified manually end-to-end, see M8).
 
+## Test status (current, after the gap-closure round)
+`cairn-vcs`: 92 tests, `cairn-transfer`: 10 tests, `cairn-api`: 85 tests. All passing
+(`./gradlew clean test`), 187 total. `web`: `npm run build` succeeds; no automated
+suite, verified manually end to end (including live against a running backend for
+every gap-closure feature: signup → login → session cookie → SSR private-repo page,
+org/team/grant creation and a real `git push` by a team member, search, blame, syntax
+highlighting, labels/milestones/assignees, PR tabs).
+
 ## Next
-All nine milestones complete. See `SUMMARY.md` for the full state of the project, exact
-build/run commands, and known gaps.
+All nine milestones plus the gap-closure round are complete. See `SUMMARY.md` for the
+FR-by-FR completion audit, the full state of the project, exact build/run commands,
+and what's genuinely still outstanding (line-anchored review comments have no UI, PR
+labels/milestones, the `/{owner}` profile page, SSH transport, and the paper-only PRD
+items).

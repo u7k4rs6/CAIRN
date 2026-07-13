@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SessionStatus } from "@/components/SessionStatus";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,7 +8,7 @@ export const metadata: Metadata = {
   description: "Self-hosted Git hosting and collaboration",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export default function RootLayout({
             Cairn
           </Link>
           <span className="text-fg-muted text-sm">self-hosted Git</span>
+          <SessionStatus />
         </header>
         <main className="flex-1">{children}</main>
       </body>

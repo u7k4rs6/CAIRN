@@ -21,6 +21,8 @@ export default function HomePage() {
         Example: <Link href="/acme/demo" className="text-accent underline">acme/demo</Link>
       </p>
       <p className="text-fg-muted text-xs mt-2">
+        <Link href="/login" className="text-accent underline">Sign in</Link>
+        {" · "}
         <Link href="/signup" className="text-accent underline">Create an account</Link>
         {" · "}
         <Link href="/repos/new" className="text-accent underline">Create a repository</Link>

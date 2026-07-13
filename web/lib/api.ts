@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 export class ApiError extends Error {
@@ -6,11 +8,34 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Forwards the browser's own {@code cairn_session} cookie to the API on every
+ * Server Component fetch. Without this, a Server Component (which runs on the
+ * Next.js server, not in the browser) has no way to see the session a real
+ * logged-in visitor holds, so every read on this app's read-first pages would be
+ * anonymous no matter who was looking at the page - the actual, previously-
+ * unreported gap the P2 session-auth work exists to close (see LoginController's
+ * Javadoc for the other half): a private repo's own owner could never see it
+ * through any of these pages, only through a client-island fetch carrying a
+ * manually-pasted PAT. Reading cookies() is only valid in a Server Component, which
+ * is the only context every caller of {@code api.*} runs in (client islands do
+ * their own fetches directly; see AccessSettingsPanel's doc comment for why).
+ */
+async function forwardedCookieHeader(): Promise<string> {
+  const store = await cookies();
+  return store.toString();
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const cookieHeader = await forwardedCookieHeader();
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     cache: "no-store",
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      ...(init?.headers || {}),
+    },
   });
   if (!res.ok) {
     throw new ApiError(res.status, `${init?.method || "GET"} ${path} failed: ${res.status}`);
@@ -63,6 +88,7 @@ export type CompareResult = { commits: CommitView[]; diffs: FileDiff[] };
 export type SearchLineMatch = { lineNumber: number; line: string };
 export type SearchFileMatch = { path: string; lines: SearchLineMatch[] };
 export type SearchResponse = { indexing: boolean; queryTooShort: boolean; results: SearchFileMatch[] };
+export type Me = { username: string; email: string };
 
 export const api = {
   tree: (owner: string, repo: string, ref: string, path: string[] = []) =>
@@ -99,4 +125,14 @@ export const api = {
     request<CompareResult>(`/api/repos/${owner}/${repo}/compare/${base}...${head}`),
   search: (owner: string, repo: string, q: string) =>
     request<SearchResponse>(`/api/repos/${owner}/${repo}/search?q=${encodeURIComponent(q)}`),
+  me: async () => {
+    try {
+      return await request<Me>(`/api/me`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        return null;
+      }
+      throw e;
+    }
+  },
 };

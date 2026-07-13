@@ -23,4 +23,11 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    // Gives TestRestTemplate a real HTTP client instead of the JDK's built-in
+    // HttpURLConnection, which has a well-known quirk: a POST that receives a 401
+    // response with a body throws HttpRetryException ("cannot retry due to server
+    // authentication, in streaming mode") instead of just returning the response,
+    // since it unconditionally tries its own auth-retry flow on any 401. Spring
+    // Boot auto-detects this on the classpath and prefers it over the JDK client.
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5'
 }

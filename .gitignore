@@ -7,5 +7,7 @@ out/
 .vscode/
 *.log
 .DS_Store
+cairn-api/data/
+.playwright-mcp/
 
 # web/ has its own .gitignore for node_modules, .next, etc.

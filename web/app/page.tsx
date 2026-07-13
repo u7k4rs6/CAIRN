@@ -20,6 +20,13 @@ export default function HomePage() {
       <p className="text-fg-muted text-xs mt-4">
         Example: <Link href="/acme/demo" className="text-accent underline">acme/demo</Link>
       </p>
+      <p className="text-fg-muted text-xs mt-2">
+        <Link href="/signup" className="text-accent underline">Create an account</Link>
+        {" · "}
+        <Link href="/repos/new" className="text-accent underline">Create a repository</Link>
+        {" · "}
+        <Link href="/orgs/new" className="text-accent underline">Create an organization</Link>
+      </p>
     </div>
   );
 }

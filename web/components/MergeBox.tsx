@@ -23,7 +23,7 @@ export function MergeBox({
   state: string;
 }) {
   const { isAuthenticated, authHeader } = useAuth();
-  const [strategy, setStrategy] = useState<"MERGE_COMMIT" | "SQUASH">("MERGE_COMMIT");
+  const [strategy, setStrategy] = useState<"MERGE_COMMIT" | "SQUASH" | "REBASE">("MERGE_COMMIT");
   const [status, setStatus] = useState<string | null>(null);
   const [merged, setMerged] = useState(state === "MERGED");
 
@@ -57,11 +57,12 @@ export function MergeBox({
     <div className="border border-border rounded p-3 flex items-center gap-2">
       <select
         value={strategy}
-        onChange={(e) => setStrategy(e.target.value as "MERGE_COMMIT" | "SQUASH")}
+        onChange={(e) => setStrategy(e.target.value as "MERGE_COMMIT" | "SQUASH" | "REBASE")}
         className="border border-border rounded px-2 py-1.5 bg-bg text-sm"
       >
         <option value="MERGE_COMMIT">Create a merge commit</option>
         <option value="SQUASH">Squash and merge</option>
+        <option value="REBASE">Rebase and merge</option>
       </select>
       <button onClick={merge} className="bg-success text-white rounded px-3 py-1.5 text-sm font-medium">
         Merge pull request

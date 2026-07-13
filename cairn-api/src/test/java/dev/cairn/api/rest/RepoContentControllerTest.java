@@ -149,6 +149,35 @@ class RepoContentControllerTest {
     }
 
     @Test
+    void compareReturnsTheDiffAndCommitsBetweenTwoRefs() {
+        seed();
+        var handle = repositories.resolve(ownerName, repoName);
+        var store = handle.objectStore();
+        ObjectId mainTip = handle.refStore().resolve("refs/heads/main").orElseThrow();
+        Commit mainCommit = (Commit) store.get(mainTip).orElseThrow();
+
+        ObjectId featureBlob = store.put(new Blob("feature content\n".getBytes()));
+        ObjectId featureTree = store.put(new Tree(List.of(
+                new TreeEntry(FileMode.REGULAR_FILE, "README.md", ((Tree) store.get(mainCommit.treeId()).orElseThrow())
+                        .entry("README.md").orElseThrow().id()),
+                new TreeEntry(FileMode.DIRECTORY, "src", ((Tree) store.get(mainCommit.treeId()).orElseThrow())
+                        .entry("src").orElseThrow().id()),
+                new TreeEntry(FileMode.REGULAR_FILE, "feature.txt", featureBlob))));
+        ObjectId featureCommit = store.put(new Commit(featureTree, List.of(mainTip), PERSON, PERSON, "add feature\n"));
+        GenerationNumbers.computeAndStore(store, handle.generations(), featureCommit);
+        handle.refStore().update("refs/heads/feature", featureCommit);
+
+        var response = rest.getForEntity(
+                baseUrl() + "/api/repos/" + ownerName + "/" + repoName + "/compare/main...feature", Map.class);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        List<?> commits = (List<?>) response.getBody().get("commits");
+        List<?> diffs = (List<?>) response.getBody().get("diffs");
+        assertThat(commits).hasSize(1);
+        assertThat(diffs).hasSize(1);
+        assertThat(((Map<?, ?>) diffs.get(0)).get("path")).isEqualTo("feature.txt");
+    }
+
+    @Test
     void privateRepoBrowsingIsDeniedAnonymously() {
         User owner = users.save(new User("hidden-owner", "hidden@cairn.dev", ""));
         repos.save(new Repo("hidden-repo", owner, null, Visibility.PRIVATE));

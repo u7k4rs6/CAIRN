@@ -171,4 +171,40 @@ class PullRequestServiceTest {
         Commit squashed = (Commit) handle.objectStore().get(result.commitId().orElseThrow()).orElseThrow();
         assertThat(squashed.parents()).hasSize(1);
     }
+
+    @Test
+    void rebaseStrategyReplaysTheSourceCommitOntoAMovedTargetTip(@TempDir Path dir) {
+        var handle = seedRepo(dir);
+        ObjectStore store = handle.objectStore();
+
+        // Advance main past the root the feature branch forked from, so a rebase
+        // must actually replay onto this new tip, not just reuse the root.
+        ObjectId rootCommit = handle.refStore().resolve("refs/heads/main").orElseThrow();
+        ObjectId mainOnlyBlob = store.put(new Blob("main moved on\n".getBytes()));
+        ObjectId mainOnlyTree = store.put(new Tree(List.of(new TreeEntry(FileMode.REGULAR_FILE, "main-only.txt", mainOnlyBlob))));
+        ObjectId advancedMain = store.put(new Commit(mainOnlyTree, List.of(rootCommit), PERSON, PERSON, "advance main"));
+        dev.cairn.vcs.dag.GenerationNumbers.computeAndStore(store, handle.generations(), advancedMain);
+        handle.refStore().update("refs/heads/main", advancedMain);
+
+        Repo repo = repo();
+        PullRequest pr = new PullRequest(repo, repo.ownerUser(), "add feature", "refs/heads/feature", "refs/heads/main");
+
+        PermissionResolver alwaysWrite = (principal, r) -> Role.WRITE;
+        BranchProtectionRuleJpaRepository rules = mock(BranchProtectionRuleJpaRepository.class);
+        when(rules.findByRepoAndRef(repo, "refs/heads/main")).thenReturn(Optional.empty());
+        PullRequestService service = new PullRequestService(alwaysWrite, registryFor(dir), rules, new ActivityPublisher(List.of()));
+
+        var result = service.merge(pr, new Principal.UserPrincipal(repo.ownerUser()),
+                MergeStrategy.REBASE, PERSON, PERSON, "rebase feature");
+
+        assertThat(result.isClean()).isTrue();
+        assertThat(pr.state()).isEqualTo(PullRequestState.MERGED);
+        ObjectId newTip = handle.refStore().resolve("refs/heads/main").orElseThrow();
+        Commit rebased = (Commit) store.get(newTip).orElseThrow();
+        assertThat(rebased.parents()).containsExactly(advancedMain);
+
+        Tree finalTree = (Tree) store.get(rebased.treeId()).orElseThrow();
+        assertThat(finalTree.entry("main-only.txt")).isPresent();
+        assertThat(finalTree.entry("feature.txt")).isPresent();
+    }
 }

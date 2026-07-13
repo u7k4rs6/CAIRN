@@ -11,6 +11,7 @@ import dev.cairn.api.repo.BranchProtectionRuleJpaRepository;
 import dev.cairn.vcs.dag.GenerationNumbers;
 import dev.cairn.vcs.merge.Conflict;
 import dev.cairn.vcs.merge.MergeEngine;
+import dev.cairn.vcs.merge.Rebase;
 import dev.cairn.vcs.object.Commit;
 import dev.cairn.vcs.object.ObjectId;
 import dev.cairn.vcs.object.PersonIdent;
@@ -25,10 +26,11 @@ import java.util.Optional;
  * Opens and merges pull requests (architecture doc, section 8: "Open and merge a
  * pull request"). Merging is the one action that reaches across every earlier
  * milestone at once: {@link PermissionResolver} for access, {@link BranchProtectionRule}
- * for approval requirements, {@link MergeEngine} for the actual three-way merge
- * (recursive base included), and the {@link PullRequestState} machine for the
- * legal-transition check that makes merging an already-merged or closed PR
- * structurally impossible rather than a bug waiting to happen.
+ * for approval requirements, {@link MergeEngine} (or {@link Rebase}, for the
+ * {@code REBASE} strategy) for the actual engine work, and the
+ * {@link PullRequestState} machine for the legal-transition check that makes
+ * merging an already-merged or closed PR structurally impossible rather than a bug
+ * waiting to happen.
  */
 @Component
 public class PullRequestService {
@@ -79,16 +81,25 @@ public class PullRequestService {
         ObjectId sourceCommit = refs.resolve(pr.sourceRef())
                 .orElseThrow(() -> new IllegalStateException("source ref not found: " + pr.sourceRef()));
 
-        MergeEngine engine = new MergeEngine(store, handle.generations());
-        MergeEngine.Outcome outcome = engine.merge(targetCommit, sourceCommit);
-        if (!outcome.isClean()) {
-            return new MergeResult(Optional.empty(), outcome.conflicts());
+        ObjectId newCommit;
+        if (strategy == MergeStrategy.REBASE) {
+            Rebase rebase = new Rebase(store, handle.generations());
+            Rebase.Outcome outcome = rebase.rebase(targetCommit, sourceCommit, committer);
+            if (!outcome.isClean()) {
+                return new MergeResult(Optional.empty(), outcome.conflicts());
+            }
+            newCommit = outcome.newTip();
+        } else {
+            MergeEngine engine = new MergeEngine(store, handle.generations());
+            MergeEngine.Outcome outcome = engine.merge(targetCommit, sourceCommit);
+            if (!outcome.isClean()) {
+                return new MergeResult(Optional.empty(), outcome.conflicts());
+            }
+            List<ObjectId> parents = strategy == MergeStrategy.SQUASH
+                    ? List.of(targetCommit)
+                    : List.of(targetCommit, sourceCommit);
+            newCommit = store.put(new Commit(outcome.mergedTreeId(), parents, author, committer, message));
         }
-
-        List<ObjectId> parents = strategy == MergeStrategy.SQUASH
-                ? List.of(targetCommit)
-                : List.of(targetCommit, sourceCommit);
-        ObjectId newCommit = store.put(new Commit(outcome.mergedTreeId(), parents, author, committer, message));
         GenerationNumbers.computeAndStore(store, handle.generations(), newCommit);
         refs.update(pr.targetRef(), newCommit);
 

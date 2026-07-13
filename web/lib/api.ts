@@ -59,6 +59,7 @@ export type PullRequestView = {
   state: string;
   author: { username: string };
 };
+export type CompareResult = { commits: CommitView[]; diffs: FileDiff[] };
 export type SearchLineMatch = { lineNumber: number; line: string };
 export type SearchFileMatch = { path: string; lines: SearchLineMatch[] };
 export type SearchResponse = { indexing: boolean; queryTooShort: boolean; results: SearchFileMatch[] };
@@ -85,9 +86,17 @@ export const api = {
   milestones: (owner: string, repo: string) => request<Milestone[]>(`/api/repos/${owner}/${repo}/milestones`),
   pulls: (owner: string, repo: string) => request<PullRequestView[]>(`/api/repos/${owner}/${repo}/pulls`),
   pull: async (owner: string, repo: string, n: string) => {
-    const all = await request<PullRequestView[]>(`/api/repos/${owner}/${repo}/pulls`);
-    return all.find((p) => String(p.id) === n) ?? null;
+    try {
+      return await request<PullRequestView>(`/api/repos/${owner}/${repo}/pulls/${n}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        return null;
+      }
+      throw e;
+    }
   },
+  compare: (owner: string, repo: string, base: string, head: string) =>
+    request<CompareResult>(`/api/repos/${owner}/${repo}/compare/${base}...${head}`),
   search: (owner: string, repo: string, q: string) =>
     request<SearchResponse>(`/api/repos/${owner}/${repo}/search?q=${encodeURIComponent(q)}`),
 };

@@ -208,6 +208,43 @@ public class RepoContentController {
         return ResponseEntity.ok(Map.of("commit", toView(commit), "diffs", views));
     }
 
+    /**
+     * Frontend spec route {@code /{owner}/{repo}/compare/{base}...{head}}: the Files
+     * changed and Commits tabs both need this (M8's DECISIONS.md named it as the
+     * missing piece blocking them, "one commit vs. its first parent" from
+     * {@code /commit/{sha}} is not the same as "base ref vs. head ref").
+     */
+    @GetMapping("/compare/{base}...{head}")
+    public ResponseEntity<?> compare(@PathVariable String owner, @PathVariable String name,
+                                      @PathVariable String base, @PathVariable String head,
+                                      HttpServletRequest request) {
+        Repo repo = requireReadableRepo(owner, name, request);
+        if (repo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        var handle = repositories.resolve(owner, name);
+        ObjectStore store = handle.objectStore();
+
+        Optional<ObjectId> baseCommitId = resolveRef(handle, base);
+        Optional<ObjectId> headCommitId = resolveRef(handle, head);
+        if (baseCommitId.isEmpty() || headCommitId.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        ObjectId baseTree = ((Commit) store.get(baseCommitId.get()).orElseThrow()).treeId();
+        ObjectId headTree = ((Commit) store.get(headCommitId.get()).orElseThrow()).treeId();
+        List<FileDiff> diffs = TreeDiff.diff(store, baseTree, headTree);
+        List<FileDiffView> diffViews = diffs.stream().map(d -> toFileDiffView(store, baseTree, headTree, d)).toList();
+
+        var baseReachable = new RevWalk(store).reachableFrom(baseCommitId.get());
+        List<CommitView> commitViews = new RevWalk(store).history(List.of(headCommitId.get())).stream()
+                .filter(c -> !baseReachable.contains(c.id()))
+                .map(this::toView)
+                .toList();
+
+        return ResponseEntity.ok(Map.of("commits", commitViews, "diffs", diffViews));
+    }
+
     private FileDiffView toFileDiffView(ObjectStore store, ObjectId baseTree, ObjectId revTree, FileDiff diff) {
         List<String> oldLines = readLines(store, baseTree, diff.path());
         List<String> newLines = readLines(store, revTree, diff.path());

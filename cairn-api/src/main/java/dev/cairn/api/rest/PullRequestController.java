@@ -99,6 +99,21 @@ public class PullRequestController {
         return ResponseEntity.ok(all);
     }
 
+    /** Was missing entirely (M8's own DECISIONS.md named this gap): the frontend fetched the whole list and found the row client-side. */
+    @GetMapping("/{number}")
+    public ResponseEntity<?> get(@PathVariable String owner, @PathVariable String name, @PathVariable Long number,
+                                  HttpServletRequest request) {
+        Repo repo = requireReadableRepo(owner, name, request);
+        if (repo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        PullRequest pr = pullRequests.findById(number).orElse(null);
+        if (pr == null || !pr.repo().id().equals(repo.id())) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(pr);
+    }
+
     @PostMapping("/{number}/reviews")
     public ResponseEntity<?> review(@PathVariable String owner, @PathVariable String name, @PathVariable Long number,
                                      @RequestBody ReviewRequest body, HttpServletRequest request) {

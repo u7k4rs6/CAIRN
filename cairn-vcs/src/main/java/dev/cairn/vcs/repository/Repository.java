@@ -24,10 +24,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The porcelain facade: {@code init}, {@code add}, {@code commit}, {@code log}, and
@@ -284,5 +286,104 @@ public final class Repository {
 
     public GenerationStore generations() {
         return generations;
+    }
+
+    /**
+     * The porcelain {@code status} command: every path in exactly one bucket, from
+     * comparing HEAD's tree, the index, and the working directory. {@code staged*}
+     * buckets compare the index against HEAD (what {@code commit} would record);
+     * {@code unstaged*} and {@code untracked} compare the working directory against
+     * the index (what {@code add} has not yet caught up to).
+     */
+    public record Status(List<String> stagedAdded, List<String> stagedModified, List<String> stagedDeleted,
+                          List<String> unstagedModified, List<String> unstagedDeleted, List<String> untracked) {
+
+        public boolean isClean() {
+            return stagedAdded.isEmpty() && stagedModified.isEmpty() && stagedDeleted.isEmpty()
+                    && unstagedModified.isEmpty() && unstagedDeleted.isEmpty() && untracked.isEmpty();
+        }
+    }
+
+    /**
+     * <b>Complexity and tradeoff.</b> O(tracked file bytes + working tree entries):
+     * every staged path's current on-disk content is read and rehashed to compare
+     * against its staged blob id, since the index deliberately carries no stat cache
+     * (mtime/size) to short-circuit unchanged files the way real Git's index does
+     * (see {@link Index}'s own Javadoc). This trades a real per-call cost, rehashing
+     * every tracked file on every {@code status} call, for the simplicity of "the
+     * index is just a path-to-blob map"; acceptable at this project's scale and
+     * named here rather than silently accepted.
+     */
+    public Status status() {
+        Map<String, Index.Entry> staged = index.entries();
+        Map<String, Index.Entry> headTree = head.resolve()
+                .map(commitId -> (Commit) objectStore.get(commitId).orElseThrow())
+                .map(commit -> flattenTree(commit.treeId()))
+                .orElseGet(Map::of);
+
+        List<String> stagedAdded = new ArrayList<>();
+        List<String> stagedModified = new ArrayList<>();
+        List<String> stagedDeleted = new ArrayList<>();
+        for (Map.Entry<String, Index.Entry> e : staged.entrySet()) {
+            Index.Entry headEntry = headTree.get(e.getKey());
+            if (headEntry == null) {
+                stagedAdded.add(e.getKey());
+            } else if (!headEntry.blobId().equals(e.getValue().blobId())) {
+                stagedModified.add(e.getKey());
+            }
+        }
+        for (String path : headTree.keySet()) {
+            if (!staged.containsKey(path)) {
+                stagedDeleted.add(path);
+            }
+        }
+
+        List<String> unstagedModified = new ArrayList<>();
+        List<String> unstagedDeleted = new ArrayList<>();
+        for (Map.Entry<String, Index.Entry> e : staged.entrySet()) {
+            Path file = workingDir.resolve(e.getKey());
+            if (!Files.exists(file)) {
+                unstagedDeleted.add(e.getKey());
+                continue;
+            }
+            try {
+                ObjectId currentId = new Blob(Files.readAllBytes(file)).id();
+                if (!currentId.equals(e.getValue().blobId())) {
+                    unstagedModified.add(e.getKey());
+                }
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
+            }
+        }
+
+        List<String> untracked = new ArrayList<>();
+        collectUntracked(workingDir, staged.keySet(), untracked);
+
+        return new Status(sorted(stagedAdded), sorted(stagedModified), sorted(stagedDeleted),
+                sorted(unstagedModified), sorted(unstagedDeleted), sorted(untracked));
+    }
+
+    private static List<String> sorted(List<String> paths) {
+        return paths.stream().sorted().toList();
+    }
+
+    private void collectUntracked(Path dir, Set<String> tracked, List<String> out) {
+        try (var children = Files.list(dir)) {
+            for (Path child : (Iterable<Path>) children::iterator) {
+                if (child.equals(cairnDir)) {
+                    continue;
+                }
+                if (Files.isDirectory(child)) {
+                    collectUntracked(child, tracked, out);
+                } else {
+                    String relative = normalize(workingDir.relativize(child).toString());
+                    if (!tracked.contains(relative)) {
+                        out.add(relative);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

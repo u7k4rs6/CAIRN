@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The gap-closure round's most foundational P0: before {@link AccountController},
- * {@link dev.cairn.api.auth.PasswordHasher} existed (Argon2id, unit-tested) but was
+ * {@link dev.cairn.api.auth.PasswordHasher} existed (BCrypt, unit-tested) but was
  * wired into zero endpoints, so the only account that could ever exist was the one
  * hardcoded in {@code DevDataSeeder}. These tests drive real signup and real
  * token-minting through the HTTP boundary, then prove the minted token actually

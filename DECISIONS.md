@@ -4,6 +4,25 @@ Judgment calls made while building Cairn, newest first within each milestone.
 
 ## Gap-closure round: P2 (correctness and quality)
 
+- **Password hashing moved from argon2id (security doc, section 2.2) to BCrypt,
+  a deliberate spec deviation, not an oversight.** Reproduced in the actual
+  deployed Docker image (not via `./gradlew bootRun`): signup's Argon2 call,
+  left at password4j's auto-detected defaults (no `psw4j.properties` on the
+  classpath - every hash logged half a dozen "default value is used" warnings),
+  took 0.06s unconstrained locally but 2.3s under a container throttled to 0.5
+  vCPU - Argon2 is deliberately memory/CPU-hard, so its real cost is highly
+  sensitive to the CPU share an actual deployed container gets, which is exactly
+  what turned a fine local signup into an unreliable one in production. BCrypt's
+  cost factor is a fixed, explicit constant (`BcryptFunction.getInstance(Bcrypt.B, 12)`)
+  instead of an environment-dependent default, so it costs the same everywhere
+  this runs. Separately, `DevDataSeeder`'s `acme`/`reviewer` accounts were seeded
+  with an empty password hash from before any login endpoint existed, so
+  `Password.check(raw, "").withArgon2()` (or now `.withBcrypt()`) threw
+  `BadParametersException` instead of failing the login cleanly; both are fixed
+  together (`PasswordHasher.matches` now returns `false` for a blank/malformed
+  hash rather than throwing, and the seeder repairs a pre-existing blank hash in
+  place with a real hash of a known demo password, self-healing an already
+  seeded database the same way the git-content check above does).
 - **`spring.jpa.open-in-view=false` was verified empirically, not just flipped.**
   Flipping it broke five `IssueControllerTest` cases immediately, in two genuinely
   different ways: (1) `IssueJpaRepository`'s first `@EntityGraph` attempt used the

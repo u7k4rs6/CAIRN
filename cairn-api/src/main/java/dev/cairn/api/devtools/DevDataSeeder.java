@@ -1,5 +1,6 @@
 package dev.cairn.api.devtools;
 
+import dev.cairn.api.auth.PasswordHasher;
 import dev.cairn.api.auth.TokenHasher;
 import dev.cairn.api.collab.Comment;
 import dev.cairn.api.collab.Issue;
@@ -62,17 +63,26 @@ import java.util.UUID;
  * (identical bytes hash to the identical id and are deduped, not re-inserted) and
  * {@link dev.cairn.vcs.ref.RefStore#update} is a plain overwrite, so replaying the
  * exact same seed content is a no-op wherever it already matches.
+ *
+ * <p><b>Demo accounts are self-healing too.</b> {@code acme} and {@code reviewer}
+ * were originally seeded with an empty password hash (there was no signup/login
+ * endpoint yet when this class was written), so neither account could ever log
+ * in. A row created that way on a previous boot is repaired in place - the same
+ * "check the actual condition, not just whether the row exists" shape as the git
+ * content above - rather than only fixed on a brand-new database.
  */
 @Component
 @Profile("seed")
 public class DevDataSeeder implements CommandLineRunner {
 
     private static final PersonIdent PERSON = new PersonIdent("Ada Lovelace", "ada@cairn.dev", 1_700_000_000L, "+0000");
+    private static final String DEMO_PASSWORD = "cairn-demo-password";
 
     private final UserJpaRepository users;
     private final RepoJpaRepository repos;
     private final RepositoryRegistry repositories;
     private final PersonalAccessTokenJpaRepository tokens;
+    private final PasswordHasher passwordHasher;
     private final TokenHasher tokenHasher;
     private final IssueJpaRepository issues;
     private final PullRequestJpaRepository pullRequests;
@@ -80,13 +90,14 @@ public class DevDataSeeder implements CommandLineRunner {
     private final CommentJpaRepository comments;
 
     public DevDataSeeder(UserJpaRepository users, RepoJpaRepository repos, RepositoryRegistry repositories,
-                          PersonalAccessTokenJpaRepository tokens, TokenHasher tokenHasher,
+                          PersonalAccessTokenJpaRepository tokens, PasswordHasher passwordHasher, TokenHasher tokenHasher,
                           IssueJpaRepository issues, PullRequestJpaRepository pullRequests,
                           ReviewJpaRepository reviews, CommentJpaRepository comments) {
         this.users = users;
         this.repos = repos;
         this.repositories = repositories;
         this.tokens = tokens;
+        this.passwordHasher = passwordHasher;
         this.tokenHasher = tokenHasher;
         this.issues = issues;
         this.pullRequests = pullRequests;
@@ -94,10 +105,20 @@ public class DevDataSeeder implements CommandLineRunner {
         this.comments = comments;
     }
 
+    /** Find-or-create, then repair a missing/blank password hash left by a pre-fix boot - never touches an already-valid hash. */
+    private User ensureUserWithDemoPassword(String username, String email) {
+        User user = users.findByUsername(username)
+                .orElseGet(() -> users.save(new User(username, email, passwordHasher.hash(DEMO_PASSWORD))));
+        if (user.passwordHash() == null || user.passwordHash().isBlank()) {
+            user.repairPasswordHash(passwordHasher.hash(DEMO_PASSWORD));
+            user = users.save(user);
+        }
+        return user;
+    }
+
     @Override
     public void run(String... args) {
-        User owner = users.findByUsername("acme")
-                .orElseGet(() -> users.save(new User("acme", "acme@cairn.dev", "")));
+        User owner = ensureUserWithDemoPassword("acme", "acme@cairn.dev");
         Repo repo = repos.findByOwnerAndName("acme", "demo")
                 .orElseGet(() -> repos.save(new Repo("demo", owner, null, Visibility.PUBLIC)));
 
@@ -148,8 +169,7 @@ public class DevDataSeeder implements CommandLineRunner {
         // The PR/review/comment rows below reference these branch names and a
         // specific path/line, not object ids, so they stay valid regardless of
         // whether the git content above was just rewritten or was already there.
-        User reviewer = users.findByUsername("reviewer")
-                .orElseGet(() -> users.save(new User("reviewer", "reviewer@cairn.dev", "")));
+        User reviewer = ensureUserWithDemoPassword("reviewer", "reviewer@cairn.dev");
 
         if (!issues.existsByRepoAndTitle(repo, "Example issue")) {
             issues.save(new Issue(repo, owner, "Example issue", "This is a seeded issue for trying the UI."));
@@ -182,6 +202,7 @@ public class DevDataSeeder implements CommandLineRunner {
         System.out.println("Cairn dev data seeded" + (gitContentPresent ? "" : " (git content was missing - rewritten)") + ".");
         System.out.println("  Repo:     http://localhost:8080/acme/demo");
         System.out.println("  Username: acme");
+        System.out.println("  Password: " + DEMO_PASSWORD);
         if (printedToken != null) {
             System.out.println("  Token:    " + printedToken);
         } else {

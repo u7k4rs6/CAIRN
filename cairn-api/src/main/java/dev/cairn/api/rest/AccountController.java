@@ -23,7 +23,8 @@ import java.util.Optional;
 
 /**
  * Account creation and token minting: before this controller, {@link PasswordHasher}
- * (Argon2id, wired up exactly per security doc section 2.2) existed and was unit-testable
+ * (BCrypt, per security doc section 2.2 - see PasswordHasher's own Javadoc for why
+ * BCrypt rather than the doc's original argon2id) existed and was unit-testable
  * but was called from nowhere in production code, because there was no endpoint that
  * created a {@link User} at all outside {@code DevDataSeeder}'s one hardcoded demo
  * account. Every other gap-closure fix in this round (orgs, teams, grants) still

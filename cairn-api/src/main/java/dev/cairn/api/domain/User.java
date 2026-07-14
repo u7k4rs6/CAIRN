@@ -20,7 +20,7 @@ public class User {
     private String email;
 
     /**
-     * Argon2id hash (security doc, section 2.2); never the plaintext password.
+     * BCrypt hash (security doc, section 2.2); never the plaintext password.
      * {@code @JsonIgnore} because {@code User} is serialized indirectly all over the
      * API (as a repo's owner, an issue's author, ...) with field-visibility Jackson
      * config (see application.yml), which would otherwise expose this in every one
@@ -57,5 +57,10 @@ public class User {
     /** Test/bootstrap convenience: assigns an id without a database round trip. */
     public void assignIdForTesting(Long id) {
         this.id = id;
+    }
+
+    /** Self-healing seed repair (DevDataSeeder): replaces a stored hash that's missing or unusable, never a live account's real password. */
+    public void repairPasswordHash(String newHash) {
+        this.passwordHash = newHash;
     }
 }

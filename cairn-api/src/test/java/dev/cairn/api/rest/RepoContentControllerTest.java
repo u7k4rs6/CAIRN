@@ -178,6 +178,81 @@ class RepoContentControllerTest {
     }
 
     @Test
+    void branchesListsEveryRefsHeadsEntryWithItsTip() {
+        seed();
+        var handle = repositories.resolve(ownerName, repoName);
+        String mainTip = handle.refStore().resolve("refs/heads/main").orElseThrow().hex();
+
+        ObjectId featureCommit = handle.refStore().resolve("refs/heads/main").orElseThrow();
+        handle.refStore().update("refs/heads/feature", featureCommit);
+
+        var response = rest.getForEntity(baseUrl() + "/api/repos/" + ownerName + "/" + repoName + "/branches", List.class);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).hasSize(2);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> branches = (List<Map<String, Object>>) (List<?>) response.getBody();
+        var names = branches.stream().map(b -> b.get("name")).toList();
+        assertThat(names).containsExactlyInAnyOrder("main", "feature");
+        Map<String, Object> main = branches.stream().filter(b -> b.get("name").equals("main")).findFirst().orElseThrow();
+        assertThat(main.get("tip")).isEqualTo(mainTip);
+    }
+
+    @Test
+    void branchesOnAPrivateRepoIsDeniedAnonymously() {
+        User owner = users.save(new User("hidden-branches-owner", "hb@cairn.dev", ""));
+        repos.save(new Repo("hidden-branches-repo", owner, null, Visibility.PRIVATE));
+        repositories.resolve("hidden-branches-owner", "hidden-branches-repo");
+
+        var response = rest.getForEntity(
+                baseUrl() + "/api/repos/hidden-branches-owner/hidden-branches-repo/branches", String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+    }
+
+    @Test
+    void statsReportsBranchCountCommitCountAndLanguageBreakdown() {
+        seed();
+        var handle = repositories.resolve(ownerName, repoName);
+        ObjectId mainTip = handle.refStore().resolve("refs/heads/main").orElseThrow();
+        handle.refStore().update("refs/heads/feature", mainTip);
+
+        var response = rest.getForEntity(baseUrl() + "/api/repos/" + ownerName + "/" + repoName + "/stats", Map.class);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody().get("branchCount")).isEqualTo(2);
+        assertThat(response.getBody().get("commitCount")).isEqualTo(1);
+        @SuppressWarnings("unchecked")
+        Map<String, Number> languages = (Map<String, Number>) response.getBody().get("languages");
+        // seed() writes README.md (Markdown) and src/App.java (Java).
+        assertThat(languages).containsKeys("Markdown", "Java");
+        assertThat(languages.get("Java").longValue()).isEqualTo("class App {}\n".getBytes().length);
+    }
+
+    @Test
+    void statsOnARepoWithNoCommitsReturnsZeroedStatsRatherThanErroring() {
+        User owner = users.save(new User("empty-stats-owner", "es@cairn.dev", ""));
+        repos.save(new Repo("empty-stats-repo", owner, null, Visibility.PUBLIC));
+        repositories.resolve("empty-stats-owner", "empty-stats-repo");
+
+        var response = rest.getForEntity(baseUrl() + "/api/repos/empty-stats-owner/empty-stats-repo/stats", Map.class);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody().get("branchCount")).isEqualTo(0);
+        assertThat(response.getBody().get("commitCount")).isEqualTo(0);
+    }
+
+    @Test
+    void statsOnAPrivateRepoIsDeniedAnonymously() {
+        User owner = users.save(new User("hidden-stats-owner", "hs@cairn.dev", ""));
+        repos.save(new Repo("hidden-stats-repo", owner, null, Visibility.PRIVATE));
+        repositories.resolve("hidden-stats-owner", "hidden-stats-repo");
+
+        var response = rest.getForEntity(
+                baseUrl() + "/api/repos/hidden-stats-owner/hidden-stats-repo/stats", String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+    }
+
+    @Test
     void privateRepoBrowsingIsDeniedAnonymously() {
         User owner = users.save(new User("hidden-owner", "hidden@cairn.dev", ""));
         repos.save(new Repo("hidden-repo", owner, null, Visibility.PRIVATE));

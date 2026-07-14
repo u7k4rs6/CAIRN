@@ -63,4 +63,12 @@ public class Review {
     public String body() {
         return body;
     }
+
+    public String path() {
+        return path;
+    }
+
+    public Integer line() {
+        return line;
+    }
 }

@@ -89,6 +89,18 @@ export type SearchLineMatch = { lineNumber: number; line: string };
 export type SearchFileMatch = { path: string; lines: SearchLineMatch[] };
 export type SearchResponse = { indexing: boolean; queryTooShort: boolean; results: SearchFileMatch[] };
 export type Me = { username: string; email: string };
+export type ConversationEntry = {
+  kind: "REVIEW" | "COMMENT";
+  id: number;
+  author: string;
+  verdict: "APPROVE" | "REQUEST_CHANGES" | "COMMENT" | null;
+  body: string;
+  path: string | null;
+  line: number | null;
+};
+export type RepoSummary = { id: number; name: string; owner: string; visibility: "PUBLIC" | "INTERNAL" | "PRIVATE" };
+export type Branch = { name: string; tip: string };
+export type RepoStats = { branchCount: number; commitCount: number; languages: Record<string, number> };
 
 export const api = {
   tree: (owner: string, repo: string, ref: string, path: string[] = []) =>
@@ -125,6 +137,11 @@ export const api = {
     request<CompareResult>(`/api/repos/${owner}/${repo}/compare/${base}...${head}`),
   search: (owner: string, repo: string, q: string) =>
     request<SearchResponse>(`/api/repos/${owner}/${repo}/search?q=${encodeURIComponent(q)}`),
+  conversation: (owner: string, repo: string, n: number) =>
+    request<ConversationEntry[]>(`/api/repos/${owner}/${repo}/pulls/${n}/conversation`),
+  ownerRepos: (owner: string) => request<RepoSummary[]>(`/api/repos/${owner}`),
+  branches: (owner: string, repo: string) => request<Branch[]>(`/api/repos/${owner}/${repo}/branches`),
+  stats: (owner: string, repo: string) => request<RepoStats>(`/api/repos/${owner}/${repo}/stats`),
   me: async () => {
     try {
       return await request<Me>(`/api/me`);

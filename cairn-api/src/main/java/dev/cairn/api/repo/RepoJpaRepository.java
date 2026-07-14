@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface RepoJpaRepository extends JpaRepository<Repo, Long> {
@@ -16,4 +17,9 @@ public interface RepoJpaRepository extends JpaRepository<Repo, Long> {
     @Query("select r from Repo r left join r.ownerUser ou left join r.ownerOrg oo "
             + "where r.name = :name and ((ou is not null and ou.username = :owner) or (oo is not null and oo.name = :owner))")
     Optional<Repo> findByOwnerAndName(@Param("owner") String owner, @Param("name") String name);
+
+    /** Every repo a user or org owns, before the permission filter callers must apply (this is not itself a visibility check). */
+    @Query("select r from Repo r left join r.ownerUser ou left join r.ownerOrg oo "
+            + "where (ou is not null and ou.username = :owner) or (oo is not null and oo.name = :owner)")
+    List<Repo> findAllByOwnerName(@Param("owner") String owner);
 }

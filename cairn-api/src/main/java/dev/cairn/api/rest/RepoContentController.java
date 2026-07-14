@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -243,6 +244,109 @@ public class RepoContentController {
                 .toList();
 
         return ResponseEntity.ok(Map.of("commits", commitViews, "diffs", diffViews));
+    }
+
+    private static final String DEFAULT_BRANCH = "main";
+
+    public record BranchView(String name, String tip) {
+    }
+
+    /** A repo's branches (not tags: only {@code refs/heads/*}), name and tip commit id. No caching (docs/HLD.md): a fresh {@code RefStore.list()} call every time. */
+    @GetMapping("/branches")
+    public ResponseEntity<?> branches(@PathVariable String owner, @PathVariable String name, HttpServletRequest request) {
+        Repo repo = requireReadableRepo(owner, name, request);
+        if (repo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        var handle = repositories.resolve(owner, name);
+        List<BranchView> views = handle.refStore().list().entrySet().stream()
+                .filter(e -> e.getKey().startsWith("refs/heads/"))
+                .map(e -> new BranchView(e.getKey().substring("refs/heads/".length()), e.getValue().hex()))
+                .toList();
+        return ResponseEntity.ok(views);
+    }
+
+    /**
+     * A small built-in extension-to-language map (no external linguist dependency,
+     * per this endpoint's own scope note). Deliberately short: this is a repo-stats
+     * summary, not an attempt at GitHub's own exhaustive language detection.
+     */
+    private static final Map<String, String> LANGUAGE_BY_EXTENSION = Map.ofEntries(
+            Map.entry("java", "Java"), Map.entry("kt", "Kotlin"),
+            Map.entry("js", "JavaScript"), Map.entry("jsx", "JavaScript"), Map.entry("mjs", "JavaScript"), Map.entry("cjs", "JavaScript"),
+            Map.entry("ts", "TypeScript"), Map.entry("tsx", "TypeScript"),
+            Map.entry("py", "Python"), Map.entry("rb", "Ruby"), Map.entry("php", "PHP"),
+            Map.entry("go", "Go"), Map.entry("rs", "Rust"),
+            Map.entry("c", "C"), Map.entry("h", "C"), Map.entry("cpp", "C++"), Map.entry("cc", "C++"), Map.entry("hpp", "C++"),
+            Map.entry("cs", "C#"), Map.entry("swift", "Swift"),
+            Map.entry("html", "HTML"), Map.entry("htm", "HTML"), Map.entry("css", "CSS"), Map.entry("scss", "CSS"),
+            Map.entry("sh", "Shell"), Map.entry("bash", "Shell"),
+            Map.entry("sql", "SQL"), Map.entry("md", "Markdown"), Map.entry("markdown", "Markdown"),
+            Map.entry("json", "JSON"), Map.entry("yml", "YAML"), Map.entry("yaml", "YAML"), Map.entry("xml", "XML"),
+            Map.entry("gradle", "Gradle"));
+
+    private static String languageOf(String path) {
+        int dot = path.lastIndexOf('.');
+        if (dot < 0 || dot == path.length() - 1) {
+            return "Other";
+        }
+        return LANGUAGE_BY_EXTENSION.getOrDefault(path.substring(dot + 1).toLowerCase(), "Other");
+    }
+
+    /**
+     * Walks every blob reachable from {@code treeId}, summing byte size per
+     * language. This is the same shape of full recursive tree walk
+     * {@code ObjectClosure.walkTree} (cairn-transfer) already does for negotiation,
+     * just accumulating sizes instead of collecting ids; not shared code, since
+     * cairn-api has no dependency on cairn-transfer's package-private internals and
+     * this session doesn't touch that module.
+     */
+    private void accumulateLanguages(ObjectStore store, ObjectId treeId, String pathPrefix, Map<String, Long> totals) {
+        Tree tree = (Tree) store.get(treeId).orElseThrow();
+        for (TreeEntry entry : tree.entries()) {
+            String path = pathPrefix.isEmpty() ? entry.name() : pathPrefix + "/" + entry.name();
+            if (entry.isDirectory()) {
+                accumulateLanguages(store, entry.id(), path, totals);
+            } else {
+                Blob blob = (Blob) store.get(entry.id()).orElseThrow();
+                totals.merge(languageOf(path), (long) blob.size(), Long::sum);
+            }
+        }
+    }
+
+    public record RepoStatsView(int branchCount, int commitCount, Map<String, Long> languages) {
+    }
+
+    /**
+     * Branch count (ref count), commit count (a full {@link RevWalk} from the
+     * default branch tip), and a language breakdown (bytes per language, summed
+     * over every blob in the default branch's tree). Uncached, consistent with
+     * docs/HLD.md's documented tradeoff for this scale of deployment - a real
+     * bottleneck at a much bigger repo size, not solved here.
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<?> stats(@PathVariable String owner, @PathVariable String name, HttpServletRequest request) {
+        Repo repo = requireReadableRepo(owner, name, request);
+        if (repo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        var handle = repositories.resolve(owner, name);
+        ObjectStore store = handle.objectStore();
+        int branchCount = (int) handle.refStore().list().keySet().stream()
+                .filter(k -> k.startsWith("refs/heads/"))
+                .count();
+
+        Optional<ObjectId> defaultTip = resolveRef(handle, DEFAULT_BRANCH);
+        if (defaultTip.isEmpty()) {
+            return ResponseEntity.ok(new RepoStatsView(branchCount, 0, Map.of()));
+        }
+        int commitCount = new RevWalk(store).history(List.of(defaultTip.get())).size();
+
+        Commit tip = (Commit) store.get(defaultTip.get()).orElseThrow();
+        Map<String, Long> languages = new LinkedHashMap<>();
+        accumulateLanguages(store, tip.treeId(), "", languages);
+
+        return ResponseEntity.ok(new RepoStatsView(branchCount, commitCount, languages));
     }
 
     private FileDiffView toFileDiffView(ObjectStore store, ObjectId baseTree, ObjectId revTree, FileDiff diff) {

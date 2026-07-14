@@ -3,6 +3,7 @@ package dev.cairn.api.rest;
 import dev.cairn.api.activity.ActivityEvent;
 import dev.cairn.api.activity.ActivityPublisher;
 import dev.cairn.api.auth.PrincipalResolver;
+import dev.cairn.api.collab.Comment;
 import dev.cairn.api.collab.MergeStrategy;
 import dev.cairn.api.collab.PullRequest;
 import dev.cairn.api.collab.PullRequestService;
@@ -12,6 +13,7 @@ import dev.cairn.api.domain.Principal;
 import dev.cairn.api.domain.Repo;
 import dev.cairn.api.domain.Role;
 import dev.cairn.api.permission.PermissionResolver;
+import dev.cairn.api.repo.CommentJpaRepository;
 import dev.cairn.api.repo.PullRequestJpaRepository;
 import dev.cairn.api.repo.RepoJpaRepository;
 import dev.cairn.api.repo.ReviewJpaRepository;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** FR-COLLAB-2/3/4: open, review, and merge pull requests. */
@@ -35,18 +38,21 @@ public class PullRequestController {
     private final RepoJpaRepository repos;
     private final PullRequestJpaRepository pullRequests;
     private final ReviewJpaRepository reviews;
+    private final CommentJpaRepository comments;
     private final PrincipalResolver principalResolver;
     private final PermissionResolver permissionResolver;
     private final PullRequestService pullRequestService;
     private final ActivityPublisher activityPublisher;
 
     public PullRequestController(RepoJpaRepository repos, PullRequestJpaRepository pullRequests,
-                                  ReviewJpaRepository reviews, PrincipalResolver principalResolver,
+                                  ReviewJpaRepository reviews, CommentJpaRepository comments,
+                                  PrincipalResolver principalResolver,
                                   PermissionResolver permissionResolver, PullRequestService pullRequestService,
                                   ActivityPublisher activityPublisher) {
         this.repos = repos;
         this.pullRequests = pullRequests;
         this.reviews = reviews;
+        this.comments = comments;
         this.principalResolver = principalResolver;
         this.permissionResolver = permissionResolver;
         this.pullRequestService = pullRequestService;
@@ -60,6 +66,15 @@ public class PullRequestController {
     }
 
     public record MergeRequest(MergeStrategy strategy, String message) {
+    }
+
+    /**
+     * One entry in the conversation timeline, {@code kind} discriminating a
+     * {@link Review} (verdict, and FR-COLLAB-3's optional {@code path}/{@code line})
+     * from a body-level {@link Comment} (verdict/path/line always null).
+     */
+    public record ConversationEntryView(String kind, Long id, String author, ReviewVerdict verdict, String body,
+                                         String path, Integer line) {
     }
 
     private Repo requireReadableRepo(String owner, String name, HttpServletRequest request) {
@@ -112,6 +127,39 @@ public class PullRequestController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(pr);
+    }
+
+    /**
+     * The PR conversation timeline (the MergeBox/ReviewComposer screen): the PR's
+     * reviews and body-level comments, together. Neither {@link Review} nor
+     * {@link Comment} carries a timestamp column (adding one is a schema change out
+     * of scope for a reads-only pass), so there is no reliable signal to interleave
+     * the two by real chronological order across tables - each table's own
+     * auto-increment id is only a valid ordering proxy within that same table.
+     * Honest compromise: reviews first (ordered by id), then comments (ordered by
+     * id), not a fabricated true chronological merge.
+     */
+    @GetMapping("/{number}/conversation")
+    public ResponseEntity<?> conversation(@PathVariable String owner, @PathVariable String name,
+                                           @PathVariable Long number, HttpServletRequest request) {
+        Repo repo = requireReadableRepo(owner, name, request);
+        if (repo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        PullRequest pr = pullRequests.findById(number).orElse(null);
+        if (pr == null || !pr.repo().id().equals(repo.id())) {
+            return ResponseEntity.notFound().build();
+        }
+        List<ConversationEntryView> entries = new ArrayList<>();
+        for (Review review : reviews.findByPullRequestOrderByIdAsc(pr)) {
+            entries.add(new ConversationEntryView("REVIEW", review.id(), review.reviewer().username(),
+                    review.verdict(), review.body(), review.path(), review.line()));
+        }
+        for (Comment comment : comments.findByPullRequestOrderByIdAsc(pr)) {
+            entries.add(new ConversationEntryView("COMMENT", comment.id(), comment.author().username(),
+                    null, comment.body(), null, null));
+        }
+        return ResponseEntity.ok(entries);
     }
 
     @PostMapping("/{number}/reviews")

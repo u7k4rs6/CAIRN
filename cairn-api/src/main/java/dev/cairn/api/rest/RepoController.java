@@ -4,16 +4,21 @@ import dev.cairn.api.auth.PrincipalResolver;
 import dev.cairn.api.domain.Organization;
 import dev.cairn.api.domain.Principal;
 import dev.cairn.api.domain.Repo;
+import dev.cairn.api.domain.Role;
 import dev.cairn.api.domain.Visibility;
+import dev.cairn.api.permission.PermissionResolver;
 import dev.cairn.api.repo.OrganizationJpaRepository;
 import dev.cairn.api.repo.RepoJpaRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,15 +36,20 @@ public class RepoController {
     private final RepoJpaRepository repos;
     private final OrganizationJpaRepository organizations;
     private final PrincipalResolver principalResolver;
+    private final PermissionResolver permissionResolver;
 
     public RepoController(RepoJpaRepository repos, OrganizationJpaRepository organizations,
-                           PrincipalResolver principalResolver) {
+                           PrincipalResolver principalResolver, PermissionResolver permissionResolver) {
         this.repos = repos;
         this.organizations = organizations;
         this.principalResolver = principalResolver;
+        this.permissionResolver = permissionResolver;
     }
 
     public record CreateRepoRequest(String name, Visibility visibility, String org) {
+    }
+
+    public record RepoSummaryView(Long id, String name, String owner, Visibility visibility) {
     }
 
     @PostMapping
@@ -70,5 +80,24 @@ public class RepoController {
                 "name", repo.name(),
                 "visibility", repo.visibility(),
                 "owner", ownerName));
+    }
+
+    /**
+     * Every repo owned by a user or org, filtered to what the requester may see -
+     * the same {@code effective_role >= read} gate every other repo-scoped endpoint
+     * applies, just run once per repo instead of once for a single named one.
+     * {@code owner} not existing at all and {@code owner} existing but owning
+     * nothing visible both come back as an empty list, not a 404: an owner name is
+     * not itself a secret the way a specific repo's existence can be (this mirrors
+     * {@code GET /api/orgs/{org}}, already a public, ungated read).
+     */
+    @GetMapping("/{owner}")
+    public ResponseEntity<?> listByOwner(@PathVariable String owner, HttpServletRequest request) {
+        Principal principal = principalResolver.resolve(request);
+        List<RepoSummaryView> visible = repos.findAllByOwnerName(owner).stream()
+                .filter(repo -> permissionResolver.authorize(principal, repo, Role.READ))
+                .map(repo -> new RepoSummaryView(repo.id(), repo.name(), owner, repo.visibility()))
+                .toList();
+        return ResponseEntity.ok(visible);
     }
 }

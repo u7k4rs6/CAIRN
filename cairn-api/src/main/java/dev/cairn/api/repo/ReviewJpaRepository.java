@@ -8,4 +8,7 @@ import java.util.List;
 
 public interface ReviewJpaRepository extends JpaRepository<Review, Long> {
     List<Review> findByPullRequest(PullRequest pullRequest);
+
+    /** Ascending id as an insertion-order proxy: reviews carry no timestamp column, and adding one is a schema change out of scope here. */
+    List<Review> findByPullRequestOrderByIdAsc(PullRequest pullRequest);
 }

@@ -1,17 +1,22 @@
 package dev.cairn.api.devtools;
 
 import dev.cairn.api.auth.TokenHasher;
+import dev.cairn.api.collab.Comment;
 import dev.cairn.api.collab.Issue;
 import dev.cairn.api.collab.PullRequest;
+import dev.cairn.api.collab.Review;
+import dev.cairn.api.collab.ReviewVerdict;
 import dev.cairn.api.domain.PersonalAccessToken;
 import dev.cairn.api.domain.Repo;
 import dev.cairn.api.domain.User;
 import dev.cairn.api.domain.Visibility;
 import dev.cairn.api.git.RepositoryRegistry;
+import dev.cairn.api.repo.CommentJpaRepository;
 import dev.cairn.api.repo.IssueJpaRepository;
 import dev.cairn.api.repo.PersonalAccessTokenJpaRepository;
 import dev.cairn.api.repo.PullRequestJpaRepository;
 import dev.cairn.api.repo.RepoJpaRepository;
+import dev.cairn.api.repo.ReviewJpaRepository;
 import dev.cairn.api.repo.UserJpaRepository;
 import dev.cairn.vcs.dag.GenerationNumbers;
 import dev.cairn.vcs.object.Blob;
@@ -48,10 +53,13 @@ public class DevDataSeeder implements CommandLineRunner {
     private final TokenHasher tokenHasher;
     private final IssueJpaRepository issues;
     private final PullRequestJpaRepository pullRequests;
+    private final ReviewJpaRepository reviews;
+    private final CommentJpaRepository comments;
 
     public DevDataSeeder(UserJpaRepository users, RepoJpaRepository repos, RepositoryRegistry repositories,
                           PersonalAccessTokenJpaRepository tokens, TokenHasher tokenHasher,
-                          IssueJpaRepository issues, PullRequestJpaRepository pullRequests) {
+                          IssueJpaRepository issues, PullRequestJpaRepository pullRequests,
+                          ReviewJpaRepository reviews, CommentJpaRepository comments) {
         this.users = users;
         this.repos = repos;
         this.repositories = repositories;
@@ -59,6 +67,8 @@ public class DevDataSeeder implements CommandLineRunner {
         this.tokenHasher = tokenHasher;
         this.issues = issues;
         this.pullRequests = pullRequests;
+        this.reviews = reviews;
+        this.comments = comments;
     }
 
     @Override
@@ -100,7 +110,21 @@ public class DevDataSeeder implements CommandLineRunner {
         handle.refStore().update("refs/heads/feature", featureCommit);
 
         issues.save(new Issue(repo, owner, "Example issue", "This is a seeded issue for trying the UI."));
-        pullRequests.save(new PullRequest(repo, owner, "Example pull request", "refs/heads/feature", "refs/heads/main"));
+        PullRequest pr = pullRequests.save(
+                new PullRequest(repo, owner, "Example pull request", "refs/heads/feature", "refs/heads/main"));
+
+        // A second user so the conversation timeline shows a real reviewer, not the
+        // PR author talking to themselves - and enough of a thread (a verdict, a
+        // plain comment, one line-anchored comment) that the endpoints added this
+        // session have something real to return on first boot.
+        User reviewer = users.save(new User("reviewer", "reviewer@cairn.dev", ""));
+        reviews.save(new Review(pr, reviewer, ReviewVerdict.APPROVE,
+                "Looks good overall, just one nit on the README.", null, null));
+        comments.save(Comment.onPullRequest(pr, owner, "Thanks for the review!"));
+        // README.md's feature-branch version adds "## Feature branch change" as its
+        // 5th line (see featureFile above) - a real changed line to anchor to.
+        reviews.save(new Review(pr, reviewer, ReviewVerdict.COMMENT,
+                "Consider a more specific heading here.", "README.md", 5));
 
         System.out.println("=".repeat(60));
         System.out.println("Cairn dev data seeded.");

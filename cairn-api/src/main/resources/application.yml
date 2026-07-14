@@ -13,8 +13,15 @@ spring:
     # lazy-by-default (@ManyToMany) associations).
     open-in-view: false
   datasource:
-    url: jdbc:h2:mem:cairn;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
+    # Env-driven so a real Postgres (Railway, docker-compose) can be swapped in via
+    # SPRING_DATASOURCE_* without touching this file; unset, every value falls back
+    # to the original in-memory H2 setup local dev and tests already rely on. No
+    # driver-class-name: Spring derives the driver from the URL's scheme, and a
+    # hardcoded org.h2.Driver here silently overrode a Postgres URL supplied only
+    # via env vars, which is what broke Postgres classpath/driver resolution before.
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:cairn;DB_CLOSE_DELAY=-1}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   jackson:
     # Domain classes deliberately use plain accessors (title(), not getTitle()), to
     # read as domain behavior rather than JavaBean boilerplate. Jackson's default

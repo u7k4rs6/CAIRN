@@ -4,6 +4,7 @@ import { Overpass, Overpass_Mono } from "next/font/google";
 import { SessionStatus } from "@/components/SessionStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CairnMark } from "@/components/CairnMark";
+import { GotoSearchBox } from "@/components/GotoSearchBox";
 import "./globals.css";
 
 // Self-hosted via next/font (redesign spec, section 4): downloaded at build time
@@ -64,14 +65,7 @@ export default async function RootLayout({
             <CairnMark size={22} />
             <span className="font-display font-bold text-lg tracking-tight">cairn</span>
           </Link>
-          <form action="/goto" className="flex-1 max-w-md">
-            <input
-              name="path"
-              placeholder="search repos, refs&hellip; (owner/repo)"
-              aria-label="Jump to a repository"
-              className="w-full font-mono text-sm border border-hairline rounded bg-surface-sunken px-3 py-1.5 text-ink placeholder:text-ink-muted focus:border-route"
-            />
-          </form>
+          <GotoSearchBox />
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
             <SessionStatus />

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { CairnMark } from "@/components/CairnMark";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { BrowseForm } from "@/components/BrowseForm";
 
 export default function HomePage() {
   return (
@@ -12,12 +11,7 @@ export default function HomePage() {
         A self-hosted Git host built on a real content-addressable version-control engine.
         Enter a repository&rsquo;s path to start browsing.
       </p>
-      <form action="/goto" className="flex gap-2 w-full max-w-md">
-        <Input name="path" placeholder="owner/repo" className="flex-1 font-mono" />
-        <Button type="submit" variant="primary">
-          Browse
-        </Button>
-      </form>
+      <BrowseForm />
       <p className="text-ink-muted text-xs mt-4">
         Example:{" "}
         <Link href="/acme/demo" className="text-route hover:underline font-mono">

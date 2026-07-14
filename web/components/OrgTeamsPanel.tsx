@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthBar";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
@@ -71,64 +73,62 @@ export function OrgTeamsPanel({ org }: { org: string }) {
   }
 
   if (!isAuthenticated) {
-    return <p className="text-fg-muted text-sm">Sign in above to manage teams for this organization.</p>;
+    return <p className="text-ink-muted text-sm">Sign in above to manage teams for this organization.</p>;
   }
   if (deniedOrMissing) {
     return (
       <div className="max-w-lg px-4 py-12 text-center">
-        <h1 className="text-lg font-semibold mb-2">404</h1>
-        <p className="text-fg-muted">This organization does not exist, or you do not administer it.</p>
+        <h1 className="text-lg font-display font-bold text-ink mb-2">Off the map</h1>
+        <p className="text-ink-2">This organization isn&rsquo;t here, or you don&rsquo;t administer it.</p>
       </div>
     );
   }
   if (!teams) {
-    return <div className="text-sm text-fg-muted animate-pulse">Loading teams...</div>;
+    return <div className="text-sm text-ink-muted animate-pulse">Loading teams&hellip;</div>;
   }
 
   return (
     <div className="max-w-2xl px-4 py-4 flex flex-col gap-4">
-      <h1 className="text-lg font-semibold">{org} / teams</h1>
-      {error && <div className="border border-danger text-danger text-sm rounded p-2">{error}</div>}
+      <h1 className="text-lg font-mono text-ink">
+        {org} <span className="text-contour">&#9656;</span> teams
+      </h1>
+      {error && <div className="border border-survey-red text-survey-red text-sm rounded p-2">{error}</div>}
 
-      <ul className="border border-border rounded divide-y divide-border">
-        {teams.length === 0 && <li className="p-2 text-sm text-fg-muted">No teams yet.</li>}
+      <ul className="border border-hairline rounded divide-y divide-hairline">
+        {teams.length === 0 && <li className="p-2 text-sm text-ink-muted">No teams yet.</li>}
         {teams.map((t) => (
           <li key={t.id} className="p-3 flex flex-col gap-2 text-sm">
             <div>
-              <span className="font-medium">{t.name}</span>
-              {t.parentTeam && <span className="text-fg-muted"> (nested under {t.parentTeam})</span>}
+              <span className="font-medium text-ink">{t.name}</span>
+              {t.parentTeam && <span className="text-ink-muted"> (nested under {t.parentTeam})</span>}
             </div>
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 placeholder="username to add"
                 value={memberInputs[t.name] || ""}
                 onChange={(e) => setMemberInputs((prev) => ({ ...prev, [t.name]: e.target.value }))}
-                className="border border-border rounded px-2 py-1 bg-bg text-sm flex-1"
+                className="flex-1"
               />
-              <button onClick={() => addMember(t.name)} className="bg-accent text-accent-fg rounded px-2 py-1 text-xs font-medium">
+              <Button variant="secondary" onClick={() => addMember(t.name)} className="text-xs py-1">
                 Add member
-              </button>
+              </Button>
             </div>
           </li>
         ))}
       </ul>
 
-      <div className="border border-border rounded p-3 flex items-end gap-2">
+      <div className="border border-hairline rounded p-3 flex items-end gap-2">
         <label className="flex flex-col gap-1 flex-1">
-          <span className="text-xs text-fg-muted">New team name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="border border-border rounded px-2 py-1.5 bg-bg text-sm" />
+          <span className="text-xs text-ink-muted">New team name</span>
+          <Input value={name} onChange={(e) => setName(e.target.value)} className="font-mono" />
         </label>
         <label className="flex flex-col gap-1 flex-1">
-          <span className="text-xs text-fg-muted">Parent team (optional)</span>
-          <input
-            value={parentTeam}
-            onChange={(e) => setParentTeam(e.target.value)}
-            className="border border-border rounded px-2 py-1.5 bg-bg text-sm"
-          />
+          <span className="text-xs text-ink-muted">Parent team (optional)</span>
+          <Input value={parentTeam} onChange={(e) => setParentTeam(e.target.value)} className="font-mono" />
         </label>
-        <button onClick={createTeam} className="bg-accent text-accent-fg rounded px-3 py-1.5 text-sm font-medium">
+        <Button variant="primary" onClick={createTeam}>
           Create team
-        </button>
+        </Button>
       </div>
     </div>
   );

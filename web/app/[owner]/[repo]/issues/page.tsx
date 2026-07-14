@@ -3,6 +3,9 @@ import { api, ApiError } from "@/lib/api";
 import { RepoHeader } from "@/components/RepoHeader";
 import { NotFoundState } from "@/components/NotFoundState";
 import { LabelChip } from "@/components/LabelChip";
+import { Input, Select } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { CairnMark } from "@/components/CairnMark";
 
 /** Frontend spec, section 5.7: list has a FilterBar (open/closed, label, assignee) and IssueRow. */
 export default async function IssuesPage({
@@ -22,51 +25,44 @@ export default async function IssuesPage({
         <RepoHeader owner={owner} repo={repo} active="issues" />
         <div className="px-4 py-4 max-w-4xl mx-auto flex flex-col gap-3">
           <form className="flex flex-wrap items-center gap-2 text-sm">
-            <select name="state" defaultValue={filters.state || ""} className="border border-border rounded px-2 py-1 bg-bg-subtle">
+            <Select name="state" defaultValue={filters.state || ""}>
               <option value="">All states</option>
               <option value="OPEN">Open</option>
               <option value="CLOSED">Closed</option>
-            </select>
-            <input
-              name="label"
-              defaultValue={filters.label || ""}
-              placeholder="label"
-              className="border border-border rounded px-2 py-1 bg-bg-subtle w-28"
-            />
-            <input
-              name="assignee"
-              defaultValue={filters.assignee || ""}
-              placeholder="assignee"
-              className="border border-border rounded px-2 py-1 bg-bg-subtle w-28"
-            />
-            <button type="submit" className="bg-accent text-accent-fg rounded px-3 py-1 font-medium">
+            </Select>
+            <Input name="label" defaultValue={filters.label || ""} placeholder="label" className="w-28 font-mono" />
+            <Input name="assignee" defaultValue={filters.assignee || ""} placeholder="assignee" className="w-28 font-mono" />
+            <Button type="submit" variant="primary" className="py-1">
               Filter
-            </button>
+            </Button>
             {(filters.state || filters.label || filters.assignee) && (
-              <Link href={`/${owner}/${repo}/issues`} className="text-fg-muted hover:underline">
+              <Link href={`/${owner}/${repo}/issues`} className="text-ink-muted hover:text-route hover:underline">
                 Clear
               </Link>
             )}
           </form>
 
           {issues.length === 0 ? (
-            <p className="text-fg-muted text-sm py-8">No issues match.</p>
+            <div className="contour-bg border border-hairline rounded p-8 text-center flex flex-col items-center gap-3">
+              <CairnMark size={28} className="text-ink-muted" />
+              <p className="text-ink-2 text-sm">No issues match. Open one to start tracking work.</p>
+            </div>
           ) : (
-            <div className="border border-border rounded overflow-hidden">
+            <div className="border border-hairline rounded overflow-hidden">
               {issues.map((issue) => (
-                <div key={issue.id} className="flex items-center justify-between px-3 py-2 border-b border-border last:border-0 text-sm gap-2">
+                <div key={issue.id} className="flex items-center justify-between px-3 py-2 border-b border-hairline last:border-0 text-sm gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Link href={`/${owner}/${repo}/issues/${issue.id}`} className="font-medium hover:underline truncate">
+                    <Link href={`/${owner}/${repo}/issues/${issue.id}`} className="font-medium text-ink hover:text-route hover:underline truncate">
                       {issue.title}
                     </Link>
                     {issue.labels.map((l) => (
                       <LabelChip key={l.id} label={l} />
                     ))}
                   </div>
-                  <span className="text-fg-muted text-xs shrink-0">
+                  <span className="text-ink-muted text-xs shrink-0 font-mono">
                     #{issue.id} opened by {issue.author?.username}
-                    {issue.assignees.length > 0 && <> · {issue.assignees.map((a) => a.username).join(", ")}</>}
-                    {issue.milestone && <> · {issue.milestone.title}</>}
+                    {issue.assignees.length > 0 && <> &middot; {issue.assignees.map((a) => a.username).join(", ")}</>}
+                    {issue.milestone && <> &middot; {issue.milestone.title}</>}
                   </span>
                 </div>
               ))}

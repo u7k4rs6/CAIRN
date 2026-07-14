@@ -15,14 +15,14 @@ export async function SessionStatus() {
   const me = await api.me().catch(() => null);
   if (!me) {
     return (
-      <Link href="/login" className="text-sm text-accent hover:underline ml-auto">
+      <Link href="/login" className="text-sm text-route hover:underline">
         Sign in
       </Link>
     );
   }
   return (
-    <span className="ml-auto flex items-center gap-2 text-sm text-fg-muted">
-      Signed in as <span className="font-medium text-fg">{me.username}</span>
+    <span className="flex items-center gap-2 text-sm text-ink-muted">
+      Signed in as <span className="font-medium text-ink">{me.username}</span>
       <LogoutButton />
     </span>
   );

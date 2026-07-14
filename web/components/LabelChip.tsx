@@ -9,10 +9,11 @@ function textColorFor(hexColor: string): string {
   return luminance > 0.6 ? "#1f2328" : "#ffffff";
 }
 
+/** Redesign spec, section 8: labels are --r-sm, mono, small; author-chosen colors are kept (constrained by the label-creation form, not this component). */
 export function LabelChip({ label }: { label: Label }) {
   return (
     <span
-      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0"
+      className="inline-flex items-center rounded-sm px-2 py-0.5 font-mono text-xs font-medium shrink-0"
       style={{ backgroundColor: `#${label.color}`, color: textColorFor(label.color) }}
     >
       {label.name}

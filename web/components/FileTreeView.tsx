@@ -18,7 +18,7 @@ export function FileTreeView({
   entries: TreeEntry[];
 }) {
   if (entries.length === 0) {
-    return <p className="text-fg-muted text-sm px-4 py-8">This directory is empty.</p>;
+    return <p className="text-ink-muted text-sm px-4 py-8">This directory is empty.</p>;
   }
   const sorted = [...entries].sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === "tree" ? -1 : 1;
@@ -34,11 +34,13 @@ export function FileTreeView({
               ? `/${owner}/${repo}/tree/${gitRef}/${entryPath.join("/")}`
               : `/${owner}/${repo}/blob/${gitRef}/${entryPath.join("/")}`;
           return (
-            <tr key={entry.name} className="border-b border-border last:border-0 hover:bg-bg-subtle">
+            <tr key={entry.name} className="border-b border-hairline last:border-0 hover:bg-surface-sunken">
               <td className="py-1.5 px-3">
                 <Link href={href} className="flex items-center gap-2">
-                  <span className="text-fg-muted">{entry.kind === "tree" ? "\u{1F4C1}" : "\u{1F4C4}"}</span>
-                  <span className={entry.kind === "tree" ? "font-medium" : ""}>{entry.name}</span>
+                  <span className="text-ink-muted" aria-hidden="true">
+                    {entry.kind === "tree" ? "\u{1F4C1}" : "\u{1F4C4}"}
+                  </span>
+                  <span className={entry.kind === "tree" ? "font-medium text-ink" : "font-mono text-ink-2"}>{entry.name}</span>
                 </Link>
               </td>
             </tr>

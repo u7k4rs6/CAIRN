@@ -33,22 +33,22 @@ export function AuthBar() {
   }, []);
 
   return (
-    <div className="border border-border rounded p-3 flex flex-wrap items-end gap-2 text-sm bg-bg-subtle">
+    <div className="border border-hairline rounded p-3 flex flex-wrap items-end gap-2 text-sm bg-surface-sunken">
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Username</span>
+        <span className="text-xs text-ink-muted">Username</span>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="border border-border rounded px-2 py-1 bg-bg text-sm w-40"
+          className="border border-hairline rounded px-2 py-1 bg-surface text-sm w-40 font-mono"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Personal access token</span>
+        <span className="text-xs text-ink-muted">Personal access token</span>
         <input
           type="password"
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          className="border border-border rounded px-2 py-1 bg-bg text-sm w-56"
+          className="border border-hairline rounded px-2 py-1 bg-surface text-sm w-56 font-mono"
         />
       </label>
       <button
@@ -58,7 +58,7 @@ export function AuthBar() {
           setSaved(true);
           setTimeout(() => setSaved(false), 1500);
         }}
-        className="bg-accent text-accent-fg rounded px-3 py-1.5 text-sm font-medium"
+        className="bg-route text-on-route rounded px-3 py-1.5 text-sm font-medium"
       >
         {saved ? "Saved" : "Save"}
       </button>

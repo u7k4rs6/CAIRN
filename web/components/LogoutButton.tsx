@@ -22,7 +22,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button onClick={logout} className="text-accent hover:underline">
+    <button onClick={logout} className="text-route hover:underline">
       Sign out
     </button>
   );

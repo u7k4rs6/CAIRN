@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/AuthBar";
+import { Textarea } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
@@ -14,7 +16,7 @@ export function CommentComposer({ owner, repo, issueId }: { owner: string; repo:
     return null;
   }
   if (submitted) {
-    return <p className="text-fg-muted text-sm">Comment posted.</p>;
+    return <p className="text-veg text-sm">Comment posted.</p>;
   }
 
   async function submit() {
@@ -27,17 +29,11 @@ export function CommentComposer({ owner, repo, issueId }: { owner: string; repo:
   }
 
   return (
-    <div className="border border-border rounded p-3 flex flex-col gap-2">
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Leave a comment"
-        rows={3}
-        className="border border-border rounded px-2 py-1.5 bg-bg text-sm"
-      />
-      <button onClick={submit} className="bg-accent text-accent-fg rounded px-3 py-1.5 text-sm font-medium self-start">
+    <div className="border border-hairline rounded p-3 flex flex-col gap-2 bg-surface">
+      <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Leave a comment" rows={3} />
+      <Button variant="primary" onClick={submit} className="self-start">
         Comment
-      </button>
+      </Button>
     </div>
   );
 }

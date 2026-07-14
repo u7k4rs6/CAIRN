@@ -1,111 +1,270 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #ffffff;
-  --bg-subtle: #f6f8fa;
-  --border: #d0d7de;
-  --fg: #1f2328;
-  --fg-muted: #59636e;
-  --accent: #0969da;
-  --accent-fg: #ffffff;
-  --danger: #cf222e;
-  --success: #1a7f37;
-  --warning: #9a6700;
+/*
+  "Waypoint" design system (docs/../FRONTEND_REDESIGN_SPEC.md, sections 3-5).
+  Two themes as CSS custom properties: light "survey sheet" (default) and "night
+  navigation". `[data-theme]` is set by ThemeToggle (an inline head script sets it
+  before paint to avoid a flash - see layout.tsx); absent that attribute, the OS
+  `prefers-color-scheme` decides.
+*/
 
-  /* A dedicated syntax-highlighting palette, distinct from the state colors above
-     (danger/success/warning are reserved for diff add/delete and form errors
-     elsewhere in this app; reusing them for token classes would make "red" mean
-     two unrelated things on the same screen, e.g. a diff deletion vs. a keyword). */
-  --syntax-keyword: #cf222e;
-  --syntax-entity: #8250df;
-  --syntax-string: #0a3069;
-  --syntax-constant: #0550ae;
-  --syntax-variable: #953800;
-  --syntax-comment: #6e7781;
+:root {
+  --paper:          #ECEEE8;
+  --surface:        #F5F6F1;
+  --surface-sunken: #E3E6DD;
+  --ink:            #1B2019;
+  --ink-2:          #4A5247;
+  --ink-muted:      #666D62; /* darkened from the spec's #7C8378 - that value cleared only AA-large (3:1) on --paper/--surface; this clears full AA (4.5:1), needed since it's used for regular-size metadata text, not just large text */
+  --hairline:       #D6CFC0;
+  --contour:        #C9A46B;
+
+  --route:          #B5297E;
+  --route-ink:      #8E1F62;
+  --route-tint:     rgba(181,41,126,0.10);
+  --on-route:       #FBF7F2;
+
+  --water:          #2E6E8E;
+  --veg:            #3E7D4F;
+  --survey-red:     #C0392B;
+  --caution:        #C98A1E;
+
+  --diff-add-bg:    rgba(62,125,79,0.12);
+  --diff-add-ink:   #2C5E39;
+  --diff-del-bg:    rgba(192,57,43,0.12);
+  --diff-del-ink:   #8F2A20;
+  --conflict-bg:    rgba(201,138,30,0.14);
+
+  --syntax-function: #8A5A2B;
+
+  --focus:          var(--route);
+  --shadow-1:       0 1px 2px rgba(27,32,25,0.06);
+
+  --display: 2.75rem;
+  --dur: 140ms;
+  --ease: cubic-bezier(0.2,0,0,1);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --bg-subtle: #161b22;
-    --border: #30363d;
-    --fg: #e6edf3;
-    --fg-muted: #8d96a0;
-    --accent: #4493f8;
-    --accent-fg: #0d1117;
-    --danger: #f85149;
-    --success: #3fb950;
-    --warning: #d29922;
+  :root:not([data-theme="light"]) {
+    --paper:          #15170F;
+    --surface:        #1D1F16;
+    --surface-sunken: #101208;
+    --ink:            #E8EAE0;
+    --ink-2:          #AEB3A4;
+    --ink-muted:      #838879; /* lightened from the spec's #767C6C for the same AA reason as light theme's --ink-muted */
+    --hairline:       #2E3126;
+    --contour:        #6E5E3C;
 
-    --syntax-keyword: #ff7b72;
-    --syntax-entity: #d2a8ff;
-    --syntax-string: #a5d6ff;
-    --syntax-constant: #79c0ff;
-    --syntax-variable: #ffa657;
-    --syntax-comment: #8b949e;
+    --route:          #E85AA6;
+    --route-ink:      #F19FCB;
+    --route-tint:     rgba(232,90,166,0.14);
+    --on-route:       #15170F;
+
+    --water:          #5AA6C4;
+    --veg:            #6BBE7E;
+    --survey-red:     #E06A5C;
+    --caution:        #E0AE4A;
+
+    --diff-add-bg:    rgba(107,190,126,0.14);
+    --diff-add-ink:   #9BD8A8;
+    --diff-del-bg:    rgba(224,106,92,0.14);
+    --diff-del-ink:   #F0A79C;
+    --conflict-bg:    rgba(224,174,74,0.16);
+
+    --syntax-function: #C08A52;
   }
 }
 
+[data-theme="night"] {
+  --paper:          #15170F;
+  --surface:        #1D1F16;
+  --surface-sunken: #101208;
+  --ink:            #E8EAE0;
+  --ink-2:          #AEB3A4;
+  --ink-muted:      #838879;
+  --hairline:       #2E3126;
+  --contour:        #6E5E3C;
+
+  --route:          #E85AA6;
+  --route-ink:      #F19FCB;
+  --route-tint:     rgba(232,90,166,0.14);
+  --on-route:       #15170F;
+
+  --water:          #5AA6C4;
+  --veg:            #6BBE7E;
+  --survey-red:     #E06A5C;
+  --caution:        #E0AE4A;
+
+  --diff-add-bg:    rgba(107,190,126,0.14);
+  --diff-add-ink:   #9BD8A8;
+  --diff-del-bg:    rgba(224,106,92,0.14);
+  --diff-del-ink:   #F0A79C;
+  --conflict-bg:    rgba(224,174,74,0.16);
+
+  --syntax-function: #C08A52;
+}
+
 @theme inline {
-  --color-bg: var(--bg);
-  --color-bg-subtle: var(--bg-subtle);
-  --color-border: var(--border);
-  --color-fg: var(--fg);
-  --color-fg-muted: var(--fg-muted);
-  --color-accent: var(--accent);
-  --color-accent-fg: var(--accent-fg);
-  --color-danger: var(--danger);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  --color-paper:          var(--paper);
+  --color-surface:        var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink:            var(--ink);
+  --color-ink-2:          var(--ink-2);
+  --color-ink-muted:      var(--ink-muted);
+  --color-hairline:       var(--hairline);
+  --color-contour:        var(--contour);
+
+  --color-route:          var(--route);
+  --color-route-ink:      var(--route-ink);
+  --color-route-tint:     var(--route-tint);
+  --color-on-route:       var(--on-route);
+
+  --color-water:          var(--water);
+  --color-veg:            var(--veg);
+  --color-survey-red:     var(--survey-red);
+  --color-caution:        var(--caution);
+
+  --color-diff-add-bg:    var(--diff-add-bg);
+  --color-diff-add-ink:   var(--diff-add-ink);
+  --color-diff-del-bg:    var(--diff-del-bg);
+  --color-diff-del-ink:   var(--diff-del-ink);
+  --color-conflict-bg:    var(--conflict-bg);
+  --color-focus:          var(--focus);
+
+  --font-display: var(--font-overpass), ui-sans-serif, system-ui, sans-serif;
+  --font-ui:      var(--font-overpass), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    var(--font-overpass-mono), ui-monospace, "SF Mono", monospace;
+
+  --text-xs:   0.75rem;
+  --text-sm:   0.8125rem;
+  --text-base: 0.875rem;
+  --text-md:   1rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.75rem;
+
+  --radius-sm: 3px;
+  --radius:    5px;
+  --radius-lg: 8px;
 }
 
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  font-size: 14px;
-}
-
-code, pre, .font-mono-data {
-  font-family: var(--font-mono);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
 }
 
 a {
   color: inherit;
 }
 
-.state-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.125rem 0.625rem;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+/* Every structural datum - hashes, refs, paths, timestamps, byte sizes, line/column
+   numbers - renders in the mono face (redesign spec, section 5's mono signature
+   rule). Prose stays in --font-ui. */
+.font-mono, code, pre {
+  font-family: var(--font-mono);
 }
 
-/* Syntax highlighting (frontend spec section 5.3/1: CodeViewer and DiffView both
-   render highlight.js output). See lib/highlight.ts for why this highlights one
-   line at a time rather than the whole file. */
+.text-display {
+  font-family: var(--font-display);
+  font-size: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Visible focus ring on every interactive element (quality floor). Tab/keyboard
+   focus only - :focus-visible already excludes mouse-click focus noise. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--route-tint);
+  color: var(--ink);
+}
+
+/* Faint contour linework backing (section 6): sparse concentric elevation rings at
+   ~0.06 opacity, never behind code text. Used behind the route graph and on auth
+   pages. Sparse, widely-spaced rings (not a repeating/tiled pattern) so it reads as
+   a couple of contour lines around a peak, not a busy stripe texture. */
+.contour-bg {
+  position: relative;
+  isolation: isolate;
+}
+.contour-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image:
+    radial-gradient(circle at 15% 20%, transparent 38px, var(--contour) 39px, var(--contour) 40px, transparent 41px,
+      transparent 70px, var(--contour) 71px, var(--contour) 72px, transparent 73px),
+    radial-gradient(circle at 85% 75%, transparent 50px, var(--contour) 51px, var(--contour) 52px, transparent 53px,
+      transparent 90px, var(--contour) 91px, var(--contour) 92px, transparent 93px);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* State chips (open/merged/closed etc.), badges, labels - small, mono, --r-sm. */
+.state-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* The route-map commit graph's load-in trace (~600ms). Reduced-motion: instant. */
+@keyframes route-trace {
+  from { stroke-dashoffset: var(--route-length, 1000); }
+  to   { stroke-dashoffset: 0; }
+}
+.route-trace-line {
+  stroke-dasharray: var(--route-length, 1000);
+  stroke-dashoffset: var(--route-length, 1000);
+  animation: route-trace 600ms var(--ease) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-trace-line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Syntax highlighting: a light map-legend theme (redesign spec, section 8). */
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-tag,
 .hljs-name {
-  color: var(--syntax-keyword);
+  color: var(--route-ink);
 }
 .hljs-title,
 .hljs-title.function_,
 .hljs-title.class_,
 .hljs-section,
 .hljs-selector-class {
-  color: var(--syntax-entity);
+  color: var(--syntax-function);
 }
 .hljs-string,
 .hljs-doctag,
 .hljs-regexp {
-  color: var(--syntax-string);
+  color: var(--veg);
 }
 .hljs-type,
 .hljs-built_in,
@@ -114,19 +273,19 @@ a {
 .hljs-literal,
 .hljs-symbol,
 .hljs-bullet {
-  color: var(--syntax-constant);
+  color: var(--water);
 }
 .hljs-variable,
 .hljs-template-variable,
 .hljs-attr,
 .hljs-attribute,
 .hljs-params {
-  color: var(--syntax-variable);
+  color: var(--syntax-function);
 }
 .hljs-comment,
 .hljs-quote,
 .hljs-meta {
-  color: var(--syntax-comment);
+  color: var(--ink-muted);
   font-style: italic;
 }
 .hljs-emphasis {
@@ -136,8 +295,8 @@ a {
   font-weight: 700;
 }
 .hljs-deletion {
-  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  background: var(--diff-del-bg);
 }
 .hljs-addition {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
+  background: var(--diff-add-bg);
 }

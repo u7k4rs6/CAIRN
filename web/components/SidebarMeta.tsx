@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthBar";
 import { LabelChip } from "@/components/LabelChip";
+import { Select, Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import type { Issue, Label, Milestone } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
@@ -113,50 +115,51 @@ export function SidebarMeta({
   }
 
   return (
-    <div className="border border-border rounded p-3 flex flex-col gap-4 text-sm w-56 shrink-0">
-      {error && <div className="text-danger text-xs">{error}</div>}
+    <div className="border border-hairline rounded p-3 flex flex-col gap-4 text-sm w-56 shrink-0 bg-surface">
+      {error && <div className="text-survey-red text-xs">{error}</div>}
 
       <div>
-        <div className="text-xs font-semibold uppercase text-fg-muted mb-2">Labels</div>
+        <div className="font-mono text-xs uppercase tracking-wide text-ink-muted mb-2">Labels</div>
         <div className="flex flex-wrap gap-1 mb-2">
-          {labels.length === 0 && <span className="text-fg-muted text-xs">None</span>}
+          {labels.length === 0 && <span className="text-ink-muted text-xs">None</span>}
           {labels.map((l) => (
             <span key={l.id} className="inline-flex items-center gap-1">
               <LabelChip label={l} />
               {isAuthenticated && (
-                <button onClick={() => removeLabel(l.id)} className="text-fg-muted hover:text-danger text-xs">
-                  x
+                <button onClick={() => removeLabel(l.id)} className="text-ink-muted hover:text-survey-red text-xs" aria-label={`Remove label ${l.name}`}>
+                  &times;
                 </button>
               )}
             </span>
           ))}
         </div>
         {isAuthenticated && (
-          <select
+          <Select
             value=""
             onChange={(e) => e.target.value && addLabel(Number(e.target.value))}
-            className="border border-border rounded px-1 py-0.5 bg-bg text-xs w-full"
+            className="text-xs w-full py-1"
+            aria-label="Add label"
           >
-            <option value="">Add label...</option>
+            <option value="">Add label&hellip;</option>
             {repoLabels.filter((l) => !labels.some((existing) => existing.id === l.id)).map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase text-fg-muted mb-2">Assignees</div>
+        <div className="font-mono text-xs uppercase tracking-wide text-ink-muted mb-2">Assignees</div>
         <div className="flex flex-col gap-1 mb-2">
-          {assignees.length === 0 && <span className="text-fg-muted text-xs">None</span>}
+          {assignees.length === 0 && <span className="text-ink-muted text-xs">None</span>}
           {assignees.map((a) => (
             <div key={a.username} className="flex items-center justify-between">
-              <span>{a.username}</span>
+              <span className="text-ink">{a.username}</span>
               {isAuthenticated && (
-                <button onClick={() => removeAssignee(a.username)} className="text-fg-muted hover:text-danger text-xs">
-                  x
+                <button onClick={() => removeAssignee(a.username)} className="text-ink-muted hover:text-survey-red text-xs" aria-label={`Remove assignee ${a.username}`}>
+                  &times;
                 </button>
               )}
             </div>
@@ -164,26 +167,27 @@ export function SidebarMeta({
         </div>
         {isAuthenticated && (
           <div className="flex gap-1">
-            <input
+            <Input
               value={assigneeInput}
               onChange={(e) => setAssigneeInput(e.target.value)}
               placeholder="username"
-              className="border border-border rounded px-1 py-0.5 bg-bg text-xs flex-1 min-w-0"
+              className="text-xs py-0.5 flex-1 min-w-0 font-mono"
             />
-            <button onClick={addAssignee} className="text-xs border border-border rounded px-1.5">
+            <Button variant="secondary" onClick={addAssignee} className="text-xs py-0.5">
               Add
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase text-fg-muted mb-2">Milestone</div>
+        <div className="font-mono text-xs uppercase tracking-wide text-ink-muted mb-2">Milestone</div>
         {isAuthenticated ? (
-          <select
+          <Select
             value={milestone?.id ?? ""}
             onChange={(e) => setMilestone(e.target.value ? Number(e.target.value) : null)}
-            className="border border-border rounded px-1 py-0.5 bg-bg text-xs w-full"
+            className="text-xs w-full py-1"
+            aria-label="Milestone"
           >
             <option value="">None</option>
             {repoMilestones.map((m) => (
@@ -191,9 +195,9 @@ export function SidebarMeta({
                 {m.title}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
-          <span className="text-fg-muted text-xs">{milestone?.title ?? "None"}</span>
+          <span className="text-ink-muted text-xs">{milestone?.title ?? "None"}</span>
         )}
       </div>
     </div>

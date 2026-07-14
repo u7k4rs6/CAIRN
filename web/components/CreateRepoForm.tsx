@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthBar";
+import { Input, Select } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
@@ -21,7 +23,7 @@ export function CreateRepoForm() {
   const router = useRouter();
 
   if (!isAuthenticated) {
-    return <p className="text-fg-muted text-sm">Sign in above to create a repository.</p>;
+    return <p className="text-ink-muted text-sm">Sign in above to create a repository.</p>;
   }
 
   async function create() {
@@ -42,27 +44,27 @@ export function CreateRepoForm() {
 
   return (
     <div className="flex flex-col gap-3 max-w-sm">
-      {error && <div className="border border-danger text-danger text-sm rounded p-2">{error}</div>}
+      {error && <div className="border border-survey-red text-survey-red text-sm rounded p-2">{error}</div>}
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Owner</span>
-        <input value={org} onChange={(e) => setOrg(e.target.value)} placeholder={username || "(you)"} className="border border-border rounded px-2 py-1.5 bg-bg text-sm" />
-        <span className="text-xs text-fg-muted">Leave blank to own it yourself, or name an organization you administer.</span>
+        <span className="text-xs text-ink-muted">Owner</span>
+        <Input value={org} onChange={(e) => setOrg(e.target.value)} placeholder={username || "(you)"} className="font-mono" />
+        <span className="text-xs text-ink-muted">Leave blank to own it yourself, or name an organization you administer.</span>
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Repository name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} className="border border-border rounded px-2 py-1.5 bg-bg text-sm" />
+        <span className="text-xs text-ink-muted">Repository name</span>
+        <Input value={name} onChange={(e) => setName(e.target.value)} className="font-mono" />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Visibility</span>
-        <select value={visibility} onChange={(e) => setVisibility(e.target.value as typeof visibility)} className="border border-border rounded px-2 py-1.5 bg-bg text-sm">
+        <span className="text-xs text-ink-muted">Visibility</span>
+        <Select value={visibility} onChange={(e) => setVisibility(e.target.value as typeof visibility)}>
           <option value="PUBLIC">Public</option>
           <option value="INTERNAL">Internal</option>
           <option value="PRIVATE">Private</option>
-        </select>
+        </Select>
       </label>
-      <button onClick={create} disabled={!name} className="bg-accent text-accent-fg rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50 self-start">
+      <Button variant="primary" onClick={create} disabled={!name} className="self-start">
         Create repository
-      </button>
+      </Button>
     </div>
   );
 }

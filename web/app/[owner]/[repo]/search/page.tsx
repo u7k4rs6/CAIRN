@@ -1,6 +1,25 @@
 import { api, ApiError } from "@/lib/api";
 import { RepoHeader } from "@/components/RepoHeader";
 import { NotFoundState } from "@/components/NotFoundState";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { CairnMark } from "@/components/CairnMark";
+
+/** Highlights the matched query substring in --route-tint (redesign spec, section 9). Case-insensitive, matching the trigram index's own case-insensitive candidate verification. */
+function highlightMatch(line: string, query: string) {
+  if (!query) return line;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = line.split(new RegExp(`(${escaped})`, "gi"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase() ? (
+      <mark key={i} className="bg-route-tint text-ink rounded-sm">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
 
 /**
  * Frontend spec, section 5.8: code search results. States: loading is implicit
@@ -27,35 +46,37 @@ export default async function SearchPage({
         <RepoHeader owner={owner} repo={repo} active="search" />
         <div className="px-4 py-4 max-w-3xl mx-auto flex flex-col gap-4">
           <form className="flex gap-2">
-            <input
-              name="q"
-              defaultValue={query}
-              placeholder="Search code in this repository"
-              className="flex-1 border border-border rounded px-3 py-2 bg-bg-subtle font-mono-data text-sm"
-            />
-            <button type="submit" className="bg-accent text-accent-fg rounded px-4 py-2 text-sm font-medium">
+            <Input name="q" defaultValue={query} placeholder="Search code in this repository" className="flex-1 font-mono" />
+            <Button type="submit" variant="primary">
               Search
-            </button>
+            </Button>
           </form>
 
-          {!query && <p className="text-fg-muted text-sm">Enter a search term above.</p>}
+          {!query && <p className="text-ink-muted text-sm">Enter a search term above.</p>}
           {response?.queryTooShort && (
-            <p className="text-fg-muted text-sm">Search needs at least three characters.</p>
+            <p className="text-ink-muted text-sm">Search needs at least three characters.</p>
           )}
           {response?.indexing && (
-            <p className="text-fg-muted text-sm">This repository's search index is still building. Try again shortly.</p>
+            <p className="text-ink-muted text-sm">This repository&rsquo;s search index is still building. Try again shortly.</p>
           )}
           {response && !response.queryTooShort && !response.indexing && response.results.length === 0 && (
-            <p className="text-fg-muted text-sm">No matches for &quot;{query}&quot;.</p>
+            <div className="contour-bg border border-hairline rounded p-8 text-center flex flex-col items-center gap-3">
+              <CairnMark size={24} className="text-ink-muted" />
+              <p className="text-ink-2 text-sm">
+                No matches for <span className="font-mono">&quot;{query}&quot;</span>.
+              </p>
+            </div>
           )}
           {response?.results.map((file) => (
-            <div key={file.path} className="border border-border rounded overflow-hidden">
-              <div className="bg-bg-subtle px-3 py-1.5 text-sm font-mono-data font-medium">{file.path}</div>
-              <div className="divide-y divide-border">
+            <div key={file.path} className="border border-hairline rounded overflow-hidden">
+              <div className="bg-surface-sunken border-b-2 border-contour px-3 py-1.5 text-sm font-mono font-medium text-ink">
+                {file.path}
+              </div>
+              <div className="divide-y divide-hairline bg-surface">
                 {file.lines.map((line) => (
-                  <div key={line.lineNumber} className="flex gap-3 px-3 py-1 text-xs font-mono-data">
-                    <span className="text-fg-muted w-10 text-right shrink-0">{line.lineNumber}</span>
-                    <span className="whitespace-pre overflow-x-auto">{line.line}</span>
+                  <div key={line.lineNumber} className="flex gap-3 px-3 py-1 text-xs font-mono">
+                    <span className="text-ink-muted w-10 text-right shrink-0">{line.lineNumber}</span>
+                    <span className="whitespace-pre overflow-x-auto">{highlightMatch(line.line, query)}</span>
                   </div>
                 ))}
               </div>

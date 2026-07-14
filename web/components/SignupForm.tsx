@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
@@ -53,26 +55,22 @@ export function SignupForm() {
 
   return (
     <div className="flex flex-col gap-3 max-w-sm">
-      {error && <div className="border border-danger text-danger text-sm rounded p-2">{error}</div>}
+      {error && <div className="border border-survey-red text-survey-red text-sm rounded p-2">{error}</div>}
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Username</span>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} className="border border-border rounded px-2 py-1.5 bg-bg text-sm" />
+        <span className="text-xs text-ink-muted">Username</span>
+        <Input value={username} onChange={(e) => setUsername(e.target.value)} />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Email</span>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} className="border border-border rounded px-2 py-1.5 bg-bg text-sm" />
+        <span className="text-xs text-ink-muted">Email</span>
+        <Input value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-fg-muted">Password</span>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="border border-border rounded px-2 py-1.5 bg-bg text-sm" />
+        <span className="text-xs text-ink-muted">Password</span>
+        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
-      <button
-        disabled={submitting || !username || !password}
-        onClick={submit}
-        className="bg-accent text-accent-fg rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50 self-start"
-      >
-        {submitting ? "Creating account..." : "Create account"}
-      </button>
+      <Button variant="primary" disabled={submitting || !username || !password} onClick={submit} className="self-start">
+        {submitting ? "Creating account…" : "Create account"}
+      </Button>
     </div>
   );
 }

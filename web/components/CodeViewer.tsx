@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { List, type RowComponentProps } from "react-window";
 import { Button } from "@/components/ui/Button";
+import { apiBase } from "@/lib/apiBase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+const API_BASE = apiBase();
 
 /** One line, text-xs with leading-5 (20px line-height, no padding): matches react-window's fixed row height exactly. */
 const ROW_HEIGHT = 20;

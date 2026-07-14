@@ -6,8 +6,9 @@ import { LabelChip } from "@/components/LabelChip";
 import { Select, Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { Issue, Label, Milestone } from "@/lib/api";
+import { apiBase } from "@/lib/apiBase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+const API_BASE = apiBase();
 
 /**
  * Frontend spec, section 5.7: the issue detail sidebar (labels, assignees,

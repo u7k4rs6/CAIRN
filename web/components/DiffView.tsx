@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/components/AuthBar";
+import { apiBase } from "@/lib/apiBase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+const API_BASE = apiBase();
 
 type Row = { kind: "equal" | "add" | "del"; oldNo: number | null; newNo: number | null; text: string };
 

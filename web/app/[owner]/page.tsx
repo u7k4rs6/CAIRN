@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { apiBase } from "@/lib/apiBase";
 import { CairnMark } from "@/components/CairnMark";
 import { StateBadge } from "@/components/StateBadge";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+const API_BASE = apiBase();
 
 /**
  * The `/{owner}` profile page (redesign spec, section 9, item 9): fixes the 404

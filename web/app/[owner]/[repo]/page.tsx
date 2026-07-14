@@ -1,4 +1,5 @@
 import { api, ApiError } from "@/lib/api";
+import { publicGitBase } from "@/lib/apiBase";
 import { RepoHeader } from "@/components/RepoHeader";
 import { FileTreeView } from "@/components/FileTreeView";
 import { NotFoundState } from "@/components/NotFoundState";
@@ -8,7 +9,6 @@ import { CairnMark } from "@/components/CairnMark";
 
 const DEFAULT_REF = "main";
 const TEASER_COMMIT_COUNT = 6;
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 /** A stable color per language name, drawn from the map-legend palette (redesign spec, section 5) rather than one fixed accent per language. */
 const LANGUAGE_PALETTE = ["var(--route)", "var(--water)", "var(--veg)", "var(--caution)", "var(--route-ink)"];
@@ -36,7 +36,7 @@ export default async function RepoHomePage({
       api.branches(owner, repo).catch(() => []),
       api.stats(owner, repo).catch(() => null),
     ]);
-    const cloneUrl = `${API_BASE}/${owner}/${repo}.git`;
+    const cloneUrl = `${publicGitBase()}/${owner}/${repo}.git`;
     const languageTotal = stats ? Object.values(stats.languages).reduce((a, b) => a + b, 0) : 0;
     const languages = stats
       ? Object.entries(stats.languages)

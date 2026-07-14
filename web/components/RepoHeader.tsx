@@ -3,8 +3,7 @@ import { SignageTabs } from "@/components/ui/SignageTabs";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { BranchSwitcher } from "@/components/ui/BranchSwitcher";
 import type { Branch } from "@/lib/api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+import { publicGitBase } from "@/lib/apiBase";
 
 /**
  * The repo header (redesign spec, section 7): the owner/repo breadcrumb reads as a
@@ -38,7 +37,7 @@ export function RepoHeader({
     // other admin/read check in this app already is (security doc, section 6.3).
     { key: "settings", label: "Settings", href: `/${owner}/${repo}/settings/access` },
   ];
-  const cloneUrl = `${API_BASE}/${owner}/${repo}.git`;
+  const cloneUrl = `${publicGitBase()}/${owner}/${repo}.git`;
 
   return (
     <div className="border-b border-hairline px-4 pt-3 bg-surface">

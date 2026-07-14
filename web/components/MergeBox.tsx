@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useAuth } from "@/components/AuthBar";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Input";
+import { apiBase } from "@/lib/apiBase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+const API_BASE = apiBase();
 
 type Conflict = { path: string; base: string[]; ours: string[]; theirs: string[] };
 

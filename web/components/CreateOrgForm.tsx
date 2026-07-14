@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthBar";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { apiBase } from "@/lib/apiBase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+const API_BASE = apiBase();
 
 export function CreateOrgForm() {
   const { isAuthenticated, authHeader } = useAuth();

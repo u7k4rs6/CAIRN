@@ -58,23 +58,24 @@ services:
       dockerfile: Dockerfile
       args:
         # Baked into the client bundle at build time (see web/Dockerfile's comment).
+        # Only ever used for the git-clone URL shown to users (web/lib/apiBase.ts's
+        # publicGitBase) - a real git client runs on the host, outside this compose
+        # network, so it needs the host-published port, not a bridge-network name.
         NEXT_PUBLIC_API_BASE: http://localhost:8080
-    # web/lib/api.ts's Server Components and every "use client" component both read
-    # the same NEXT_PUBLIC_API_BASE URL, and one of those runs in the browser (on
-    # the host) while the other runs inside this container - so both need "localhost"
-    # to mean the same machine. Host networking (Linux only) is what makes that true:
-    # a bridge network's service-name DNS (e.g. http://api:8080) would work for the
-    # container but is unreachable from the browser, which is the actual constraint
-    # here, not a shortcut around "compose networking" support for it.
-    network_mode: host
+    ports:
+      - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_BASE: http://localhost:8080
+      # Server Components, route handlers, and this container's own next.config.ts
+      # rewrite (web/lib/apiBase.ts's apiBase) reach the api service by its plain
+      # bridge-network service name - normal container-to-container networking, the
+      # same shape as Railway's private network this whole design targets. The
+      # browser itself never reads this: it only ever calls this app's own origin at
+      # /api/*, which the rewrite proxies here server-side.
+      INTERNAL_API_URL: http://api:8080
       PORT: "3000"
-      # Next's standalone server.js binds to os.hostname() by default. Under host
-      # networking the container sees the real host's hostname (resolved via the
-      # host's own /etc/hosts, e.g. Debian/Ubuntu's 127.0.1.1 alias) instead of a
-      # container-local one, so without this it listens on that one specific
-      # loopback alias instead of every interface - unreachable via "localhost".
+      # Next's standalone server.js binds to os.hostname() by default, which isn't
+      # guaranteed reachable via the published port - binding every interface avoids
+      # relying on that.
       HOSTNAME: "0.0.0.0"
     depends_on:
       - api

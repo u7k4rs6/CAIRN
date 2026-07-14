@@ -1,6 +1,7 @@
 package dev.cairn.api.repo;
 
 import dev.cairn.api.collab.Issue;
+import dev.cairn.api.domain.Repo;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -33,4 +34,7 @@ public interface IssueJpaRepository extends JpaRepository<Issue, Long> {
     @Override
     @EntityGraph(attributePaths = {"labels", "assignees", "milestone"}, type = EntityGraph.EntityGraphType.LOAD)
     List<Issue> findAll();
+
+    /** A plain boolean projection needs no entity graph: no Issue instance is materialized to serialize. */
+    boolean existsByRepoAndTitle(Repo repo, String title);
 }

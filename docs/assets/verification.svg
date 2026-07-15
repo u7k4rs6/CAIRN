@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="Verification: each operation runs through the Cairn engine and through the real git binary, and the outputs are compared byte for byte">
+  <title>Checked against the real thing</title>
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#7C8894"/>
+    </marker>
+  </defs>
+  <style>
+    .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+    .title { font-size: 13px; letter-spacing: 3px; fill: #7C8894; }
+    .op { font-size: 13px; fill: #A9B4BD; }
+    .lane { font-size: 16px; font-weight: 700; fill: #E4E9E6; }
+    .sub { font-size: 11px; letter-spacing: 1.8px; fill: #7C8894; }
+    .out { font-size: 13px; fill: #B3C79A; }
+    .cap { font-size: 12px; fill: #7C8894; }
+
+    .cursor { animation: step 6.3s steps(7, end) infinite; }
+    @keyframes step { from { transform: translateY(0) } to { transform: translateY(210px) } }
+    .beat { animation: beat .9s ease-in-out infinite; }
+    @keyframes beat { 0%, 70%, 100% { opacity: .28 } 30% { opacity: 1 } }
+    @media (prefers-reduced-motion: reduce) {
+      .cursor, .beat { animation: none }
+      .beat { opacity: 1 }
+    }
+  </style>
+
+  <rect width="1200" height="420" rx="14" fill="#12161B"/>
+  <rect x=".5" y=".5" width="1199" height="419" rx="14" fill="none" stroke="#2A323B"/>
+  <text class="mono title" x="48" y="42">CHECKED AGAINST THE REAL THING</text>
+
+  <!-- op list -->
+  <text class="mono sub" x="48" y="82">IN THE TEST SUITE</text>
+  <g class="cursor"><rect x="40" y="94" width="252" height="26" rx="5" fill="#9BB380" fill-opacity=".12" stroke="#9BB380" stroke-opacity=".5"/></g>
+  <g class="mono op">
+    <text x="56" y="112">hash-object</text>
+    <text x="56" y="142">write-tree</text>
+    <text x="56" y="172">commit-tree</text>
+    <text x="56" y="202">diff (Myers)</text>
+    <text x="56" y="232">merge-base</text>
+    <text x="56" y="262">three-way merge</text>
+    <text x="56" y="292">packfile round-trip</text>
+  </g>
+
+  <line x1="300" y1="94" x2="300" y2="306" stroke="#2A323B"/>
+  <path d="M300 200 H352" stroke="#7C8894" stroke-width="1.6" marker-end="url(#a3)"/>
+
+  <!-- split -->
+  <path d="M360 200 H392 V128 H430" fill="none" stroke="#7C8894" stroke-width="1.6" marker-end="url(#a3)"/>
+  <path d="M360 200 H392 V272 H430" fill="none" stroke="#7C8894" stroke-width="1.6" marker-end="url(#a3)"/>
+
+  <!-- lane A: cairn -->
+  <rect x="438" y="90" width="330" height="76" rx="8" fill="#171E22" stroke="#9BB380" stroke-opacity=".55"/>
+  <text class="mono lane" x="458" y="122">cairn-vcs</text>
+  <text class="mono sub" x="458" y="144">WRITTEN FROM SCRATCH, IN JAVA</text>
+
+  <!-- lane B: git -->
+  <rect x="438" y="234" width="330" height="76" rx="8" fill="#171E22" stroke="#B76B45" stroke-opacity=".55"/>
+  <text class="mono lane" x="458" y="266">git</text>
+  <text class="mono sub" x="458" y="288">THE ACTUAL BINARY</text>
+
+  <path d="M768 128 H812 V186" fill="none" stroke="#7C8894" stroke-width="1.6" marker-end="url(#a3)"/>
+  <path d="M768 272 H812 V214" fill="none" stroke="#7C8894" stroke-width="1.6" marker-end="url(#a3)"/>
+
+  <!-- outputs -->
+  <rect x="850" y="90" width="302" height="220" rx="8" fill="#0E1216" stroke="#2A323B"/>
+  <text class="mono sub" x="872" y="122">OUTPUT</text>
+  <text class="mono out" x="872" y="154">4f0a1b9c8e2d7a3f01bb</text>
+  <text class="mono cap" x="872" y="176">cairn</text>
+  <line x1="872" y1="196" x2="1130" y2="196" stroke="#2A323B"/>
+  <text class="mono out" x="872" y="228">4f0a1b9c8e2d7a3f01bb</text>
+  <text class="mono cap" x="872" y="250">git</text>
+  <g class="beat">
+    <rect x="872" y="266" width="258" height="28" rx="5" fill="#9BB380" fill-opacity=".14"/>
+    <text class="mono" x="884" y="285" font-size="12.5" fill="#B3C79A">byte-for-byte equal</text>
+  </g>
+
+  <line x1="48" y1="336" x2="1152" y2="336" stroke="#2A323B"/>
+  <text class="mono" x="48" y="372" font-size="15" fill="#E4E9E6">A test suite that only checks the engine against its own expectations proves the engine is self-consistent.</text>
+  <text class="mono" x="48" y="396" font-size="15" fill="#A9B4BD">This one checks it against the implementation everyone else in the world is already running.</text>
+</svg>

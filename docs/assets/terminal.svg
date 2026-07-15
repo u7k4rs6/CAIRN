@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 438" width="1200" height="438" role="img" aria-label="Terminal: docker compose up starts the database, API and web containers, the seeded access token is printed in the API logs, and a curl against the commits endpoint returns real commit objects">
+  <title>Quickstart</title>
+  <style>
+    .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 14px; }
+    .pr { fill: #9BB380; }
+    .chrome { font-size: 12px; fill: #66717C; letter-spacing: .6px; }
+    .l0 { animation: fade0 15.0s steps(1,end) infinite }
+    @keyframes fade0 { 0%,2.67% { opacity:0 } 3.00%,97% { opacity:1 } 100% { opacity:0 } }
+    .c0 { animation: type0 15.0s steps(20,end) infinite; transform-origin: 229px 0 }
+    @keyframes type0 { 0%,3.00% { transform:scaleX(1) } 6.73%,97% { transform:scaleX(0) } 100% { transform:scaleX(1) } }
+    .l1 { animation: fade1 15.0s ease-out infinite }
+    @keyframes fade1 { 0%,11.33% { opacity:0; transform:translateX(-4px) } 12.53%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l2 { animation: fade2 15.0s ease-out infinite }
+    @keyframes fade2 { 0%,13.00% { opacity:0; transform:translateX(-4px) } 14.20%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l3 { animation: fade3 15.0s ease-out infinite }
+    @keyframes fade3 { 0%,14.67% { opacity:0; transform:translateX(-4px) } 15.87%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l4 { animation: fade4 15.0s steps(1,end) infinite }
+    @keyframes fade4 { 0%,20.00% { opacity:0 } 20.33%,97% { opacity:1 } 100% { opacity:0 } }
+    .c4 { animation: type4 15.0s steps(58,end) infinite; transform-origin: 548px 0 }
+    @keyframes type4 { 0%,20.33% { transform:scaleX(1) } 31.16%,97% { transform:scaleX(0) } 100% { transform:scaleX(1) } }
+    .l5 { animation: fade5 15.0s ease-out infinite }
+    @keyframes fade5 { 0%,32.67% { opacity:0; transform:translateX(-4px) } 33.87%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l6 { animation: fade6 15.0s ease-out infinite }
+    @keyframes fade6 { 0%,34.00% { opacity:0; transform:translateX(-4px) } 35.20%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l7 { animation: fade7 15.0s ease-out infinite }
+    @keyframes fade7 { 0%,35.33% { opacity:0; transform:translateX(-4px) } 36.53%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l8 { animation: fade8 15.0s ease-out infinite }
+    @keyframes fade8 { 0%,36.67% { opacity:0; transform:translateX(-4px) } 37.87%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l9 { animation: fade9 15.0s steps(1,end) infinite }
+    @keyframes fade9 { 0%,42.00% { opacity:0 } 42.33%,97% { opacity:1 } 100% { opacity:0 } }
+    .c9 { animation: type9 15.0s steps(67,end) infinite; transform-origin: 624px 0 }
+    @keyframes type9 { 0%,42.33% { transform:scaleX(1) } 54.84%,97% { transform:scaleX(0) } 100% { transform:scaleX(1) } }
+    .l10 { animation: fade10 15.0s ease-out infinite }
+    @keyframes fade10 { 0%,56.67% { opacity:0; transform:translateX(-4px) } 57.87%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .l11 { animation: fade11 15.0s ease-out infinite }
+    @keyframes fade11 { 0%,58.00% { opacity:0; transform:translateX(-4px) } 59.20%,97% { opacity:1; transform:translateX(0) } 100% { opacity:0 } }
+    .cursor { animation: show 15.0s steps(1,end) infinite, blink 1.05s steps(1,end) infinite }
+    @keyframes show { 0%,61.33% { opacity:0 } 62.00%,97% { opacity:1 } 100% { opacity:0 } }
+    @keyframes blink { 0%,50% { fill-opacity:1 } 51%,100% { fill-opacity:0 } }
+    @media (prefers-reduced-motion: reduce) {
+      .l0, .l1, .l2, .l3, .l4, .l5, .l6, .l7, .l8, .l9, .l10, .l11, .cursor { animation: none; opacity: 1 }
+      .c0, .c4, .c9 { display: none }
+    }
+  </style>
+  <rect width="1200" height="438" rx="12" fill="#0E1216"/>
+  <rect x=".5" y=".5" width="1199" height="437" rx="12" fill="none" stroke="#2A323B"/>
+  <path d="M0 12 A12 12 0 0 1 12 0 H1188 A12 12 0 0 1 1200 12 V46 H0 Z" fill="#171E22"/>
+  <line x1="0" y1="46" x2="1200" y2="46" stroke="#2A323B"/>
+  <circle cx="26" cy="23" r="5.5" fill="#3B444E"/>
+  <circle cx="46" cy="23" r="5.5" fill="#3B444E"/>
+  <circle cx="66" cy="23" r="5.5" fill="#3B444E"/>
+  <text class="mono chrome" x="600.0" y="27" text-anchor="middle">cairn &#8212; requires docker and docker compose, nothing else</text>
+  <text class="mono pr l0" x="34" y="92">$</text>
+  <text class="mono l0" x="50.8" y="92" fill="#D7DEDA">docker compose up -d</text>
+  <rect class="cover c0" x="48.8" y="77" width="180" height="20" fill="#0E1216"/>
+  <text class="mono l1" x="34" y="118" fill="#9BB380">  ✔ Container cairn-db-1   Started</text>
+  <text class="mono l2" x="34" y="144" fill="#9BB380">  ✔ Container cairn-api-1  Started</text>
+  <text class="mono l3" x="34" y="170" fill="#9BB380">  ✔ Container cairn-web-1  Started</text>
+  <text class="mono pr l4" x="34" y="196">$</text>
+  <text class="mono l4" x="50.8" y="196" fill="#D7DEDA">docker compose logs api | grep -A3 "Cairn dev data seeded"</text>
+  <rect class="cover c4" x="48.8" y="181" width="499" height="20" fill="#0E1216"/>
+  <text class="mono l5" x="34" y="222" fill="#66717C">api-1  | Cairn dev data seeded</text>
+  <text class="mono l6" x="34" y="248" fill="#66717C">api-1  |   repo   acme/demo (public)</text>
+  <text class="mono l7" x="34" y="274" fill="#66717C">api-1  |   pull   http://localhost:3000/acme/demo</text>
+  <text class="mono l8" x="34" y="300" fill="#B76B45">api-1  |   token  cairn_pat_7f3d9c…</text>
+  <text class="mono pr l9" x="34" y="326">$</text>
+  <text class="mono l9" x="50.8" y="326" fill="#D7DEDA">curl -u acme:$TOKEN localhost:8080/api/repos/acme/demo/commits/main</text>
+  <rect class="cover c9" x="48.8" y="311" width="575" height="20" fill="#0E1216"/>
+  <text class="mono l10" x="34" y="352" fill="#7FA8C4">[ { "sha": "4f0a1b9c8e2d7a3f", "message": "Add object store", … },</text>
+  <text class="mono l11" x="34" y="378" fill="#7FA8C4">  { "sha": "8c21ee0b4d19f5aa", "message": "Myers diff", … } ]</text>
+  <rect class="cursor" x="34" y="389" width="8" height="17" fill="#9BB380"/>
+</svg>

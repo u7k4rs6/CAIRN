@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-label="Content addressing: file bytes get a type header, are hashed with SHA-1, and the digest is both the name and the address on disk">
+  <title>How an object gets its name</title>
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#7C8894"/>
+    </marker>
+  </defs>
+  <style>
+    .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+    .step { font-size: 11px; letter-spacing: 2.4px; fill: #7C8894; }
+    .code { font-size: 12.5px; fill: #A9B4BD; }
+    .key { fill: #9BB380; }
+    .oxide { fill: #B76B45; }
+    .cap { font-size: 12px; fill: #7C8894; }
+    .title { font-size: 13px; letter-spacing: 3px; fill: #7C8894; }
+    .big { font-size: 15px; fill: #E4E9E6; }
+
+    .lit { animation: lit 5.2s ease-in-out infinite; }
+    .l2 { animation-delay: 1.3s } .l3 { animation-delay: 2.6s } .l4 { animation-delay: 3.9s }
+    @keyframes lit {
+      0%, 22%, 100% { stroke: #2F3841 }
+      6%, 16%       { stroke: #9BB380 }
+    }
+    .scan { animation: scan 5.2s ease-in-out infinite; }
+    @keyframes scan { 0% { opacity: 0; transform: translateY(0) } 4% { opacity: .9 } 14% { opacity: .9; transform: translateY(92px) } 18%, 100% { opacity: 0; transform: translateY(92px) } }
+
+    .flick { animation: flick 5.2s steps(1, end) infinite; opacity: 0 }
+    .fa { animation-delay: 2.60s } .fb { animation-delay: 2.72s } .fc { animation-delay: 2.84s }
+    @keyframes flick { 0% { opacity: 1 } 2.3% { opacity: 0 } 100% { opacity: 0 } }
+    .final { animation: final 5.2s ease-out infinite; }
+    @keyframes final { 0%, 56% { opacity: 0 } 60%, 100% { opacity: 1 } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lit, .scan, .flick, .final { animation: none }
+      .scan, .flick { opacity: 0 } .final { opacity: 1 }
+    }
+  </style>
+
+  <rect width="1200" height="360" rx="14" fill="#12161B"/>
+  <rect x=".5" y=".5" width="1199" height="359" rx="14" fill="none" stroke="#2A323B"/>
+  <text class="mono title" x="48" y="42">HOW AN OBJECT GETS ITS NAME</text>
+
+  <!-- 1: content -->
+  <text class="mono step" x="48" y="82">01 &#183; CONTENT</text>
+  <g>
+    <rect class="lit" x="48" y="96" width="248" height="152" rx="8" fill="#171E22" stroke="#2F3841"/>
+    <g class="mono code">
+      <text x="68" y="126">public final class</text>
+      <text x="68" y="146" class="key">  ObjectStore {</text>
+      <text x="68" y="166">    Path root;</text>
+      <text x="68" y="186">    ...</text>
+      <text x="68" y="206">  }</text>
+    </g>
+    <text class="mono cap" x="68" y="234">27 bytes</text>
+    <g class="scan"><rect x="49" y="110" width="246" height="2" fill="#9BB380"/></g>
+  </g>
+
+  <!-- 2: header -->
+  <text class="mono step" x="360" y="82">02 &#183; TYPED</text>
+  <rect class="lit l2" x="360" y="96" width="248" height="152" rx="8" fill="#171E22" stroke="#2F3841"/>
+  <text class="mono big" x="380" y="140"><tspan class="oxide">blob</tspan> <tspan class="oxide">27</tspan>\0<tspan fill="#A9B4BD">&#8230;content&#8230;</tspan></text>
+  <text class="mono cap" x="380" y="176">The type and the length are</text>
+  <text class="mono cap" x="380" y="194">part of what gets hashed.</text>
+  <text class="mono cap" x="380" y="212">A tree and a blob with the</text>
+  <text class="mono cap" x="380" y="230">same bytes hash differently.</text>
+
+  <!-- 3: hash -->
+  <text class="mono step" x="672" y="82">03 &#183; ADDRESSED</text>
+  <rect class="lit l3" x="672" y="96" width="248" height="152" rx="8" fill="#171E22" stroke="#2F3841"/>
+  <text class="mono" x="692" y="130" font-size="13" fill="#7C8894">SHA-1</text>
+  <g class="mono" font-size="13.5">
+    <text class="flick fa" x="692" y="164" fill="#5A6672">c81d4e2ebbb1e2c2f9c0d1</text>
+    <text class="flick fb" x="692" y="164" fill="#5A6672">7f83b1657ff1fc53b92dc1</text>
+    <text class="flick fc" x="692" y="164" fill="#5A6672">2fd4e1c67a2d28fced849e</text>
+    <g class="final">
+      <text x="692" y="164" fill="#B3C79A">91cc5da5f3e0a8b71c04e2</text>
+      <text x="692" y="184" fill="#B3C79A">7b6c9d18a3f0b45e2</text>
+    </g>
+  </g>
+  <text class="mono cap" x="692" y="216">The digest is the name.</text>
+  <text class="mono cap" x="692" y="234">Nothing assigns it.</text>
+
+  <!-- 4: on disk -->
+  <text class="mono step" x="984" y="82">04 &#183; STORED</text>
+  <rect class="lit l4" x="984" y="96" width="168" height="152" rx="8" fill="#171E22" stroke="#2F3841"/>
+  <g class="mono" font-size="12.5">
+    <text x="1002" y="128" fill="#7C8894">objects/</text>
+    <text x="1014" y="148" fill="#B76B45">91</text><text x="1030" y="148" fill="#7C8894">/</text>
+    <text x="1026" y="168" fill="#B3C79A">cc5da5f3</text>
+    <text x="1026" y="186" fill="#B3C79A">e0a8b71c</text>
+    <text x="1026" y="204" fill="#B3C79A">04e27b6c</text>
+    <text x="1026" y="222" fill="#B3C79A">9d18a3f0</text>
+  </g>
+
+  <g stroke="#7C8894" stroke-width="1.6" marker-end="url(#a2)">
+    <line x1="304" y1="172" x2="352" y2="172"/>
+    <line x1="616" y1="172" x2="664" y2="172"/>
+    <line x1="928" y1="172" x2="976" y2="172"/>
+  </g>
+
+  <line x1="48" y1="284" x2="1152" y2="284" stroke="#2A323B"/>
+  <text class="mono" x="48" y="318" font-size="14" fill="#A9B4BD">Same bytes in, same name out, on any machine, forever. That property is the whole reason Git can be distributed,</text>
+  <text class="mono" x="48" y="338" font-size="14" fill="#A9B4BD">and it is the property a database with git-shaped column names quietly gives up.</text>
+</svg>

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="Cairn: a content-addressable version control engine written from scratch in Java">
+  <title>Cairn</title>
+  <defs>
+    <clipPath id="frame"><rect x="0" y="0" width="1200" height="420" rx="14"/></clipPath>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#9BB380" stop-opacity=".38"/>
+      <stop offset="100%" stop-color="#9BB380" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7C8894" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#7C8894" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+    .word { font-size: 132px; font-weight: 700; letter-spacing: 14px; fill: #E4E9E6; }
+    .eyebrow { font-size: 15px; font-weight: 500; letter-spacing: 5.5px; fill: #9BB380; }
+    .lede { font-size: 19px; fill: #A9B4BD; }
+    .lede tspan.hi { fill: #E4E9E6; }
+    .cap { font-size: 12px; letter-spacing: 1.4px; fill: #0E1216; font-weight: 600; }
+    .hash { font-size: 11px; letter-spacing: .6px; fill: #B76B45; }
+
+    .stone { animation: settle .7s cubic-bezier(.18,.86,.24,1) backwards; }
+    .s1 { animation-delay: .05s } .s2 { animation-delay: .22s } .s3 { animation-delay: .39s }
+    .s4 { animation-delay: .56s } .s5 { animation-delay: .73s }
+    @keyframes settle { from { transform: translateY(-18px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+
+    .halo { animation: breathe 4.5s ease-in-out 1.3s infinite; transform-origin: 918px 196px; }
+    @keyframes breathe { 0%,100% { opacity: .5; transform: scale(.92) } 50% { opacity: 1; transform: scale(1.06) } }
+
+    .rule { animation: draw 1s ease-out .4s backwards; }
+    @keyframes draw { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stone, .halo, .rule { animation: none }
+    }
+  </style>
+
+  <g clip-path="url(#frame)">
+    <rect width="1200" height="420" fill="#12161B"/>
+
+    <!-- topographic contours: this is a trail marker, so the ground it sits on is a map -->
+    <g fill="none" stroke="#7C8894" stroke-opacity=".08" stroke-width="1.4">
+      <path d="M-40 366 C 180 330 330 392 520 356 S 900 300 1240 340"/>
+      <path d="M-40 322 C 200 282 340 350 540 308 S 920 248 1240 292"/>
+      <path d="M-40 276 C 220 232 350 306 560 258 S 940 194 1240 242"/>
+      <path d="M-40 228 C 240 180 360 260 580 206 S 960 138 1240 190"/>
+      <path d="M-40 176 C 260 126 380 210 600 152 S 980 82 1240 136"/>
+      <path d="M-40 122 C 280 70 400 158 620 96 S 1000 24 1240 80"/>
+    </g>
+
+    <!-- wordmark -->
+    <text class="mono eyebrow" x="72" y="108">SELF&#8209;HOSTED GIT HOSTING &#183; THE ENGINE IS THE POINT</text>
+    <text class="mono word" x="66" y="238">CAIRN</text>
+    <rect class="rule" x="72" y="270" width="560" height="2" fill="url(#fade)" style="transform-origin:72px 271px"/>
+    <text class="mono lede" x="72" y="308">A content&#8209;addressable version control engine,</text>
+    <text class="mono lede" x="72" y="336">written from scratch. <tspan class="hi">Every operation cross&#8209;checked</tspan></text>
+    <text class="mono lede" x="72" y="364"><tspan class="hi">against the real git binary</tspan>, not against itself.</text>
+
+    <!-- the cairn: five objects, stacked, each addressed by its own content -->
+    <g>
+      <ellipse cx="918" cy="378" rx="168" ry="14" fill="#000" opacity=".35"/>
+
+      <g class="stone s1">
+        <path d="M806 372 L790 344 Q788 332 802 330 L1034 330 Q1048 332 1046 344 L1030 372 Q1028 378 1018 378 L818 378 Q808 378 806 372 Z" fill="#5A6672"/>
+        <path d="M790 344 Q788 332 802 330 L1034 330 Q1048 332 1046 344 Z" fill="#6E7C88"/>
+        <text class="mono cap" x="828" y="352">PACKFILE</text>
+        <text class="mono hash" x="1027" y="352" text-anchor="end">delta-encoded</text>
+      </g>
+
+      <g class="stone s2">
+        <path d="M826 328 L812 296 Q810 285 823 284 L1013 284 Q1026 285 1024 296 L1010 328 Q1008 330 998 330 L838 330 Q828 330 826 328 Z" fill="#616D79"/>
+        <path d="M812 296 Q810 285 823 284 L1013 284 Q1026 285 1024 296 Z" fill="#77848F"/>
+        <text class="mono cap" x="846" y="308">COMMIT</text>
+        <text class="mono hash" x="1006" y="308" text-anchor="end">&#8594; 8c21ee0</text>
+      </g>
+
+      <g class="stone s3">
+        <path d="M848 282 L836 252 Q834 242 846 241 L990 241 Q1002 242 1000 252 L988 282 Q986 284 977 284 L859 284 Q850 284 848 282 Z" fill="#68747F"/>
+        <path d="M836 252 Q834 242 846 241 L990 241 Q1002 242 1000 252 Z" fill="#7E8B96"/>
+        <text class="mono cap" x="866" y="264">TREE</text>
+        <text class="mono hash" x="981" y="264" text-anchor="end">sorted</text>
+      </g>
+
+      <g class="stone s4">
+        <path d="M872 239 L862 212 Q860 203 871 202 L966 202 Q977 203 975 212 L965 239 Q963 241 955 241 L882 241 Q874 241 872 239 Z" fill="#707C87"/>
+        <path d="M862 212 Q860 203 871 202 L966 202 Q977 203 975 212 Z" fill="#87929C"/>
+        <text class="mono cap" x="884" y="224">BLOB</text>
+      </g>
+
+      <g class="halo"><circle cx="918" cy="196" r="62" fill="url(#halo)"/></g>
+
+      <g class="stone s5">
+        <path d="M892 200 L884 176 Q883 168 892 167 L945 167 Q954 168 953 176 L945 200 Q944 202 937 202 L899 202 Q893 202 892 200 Z" fill="#9BB380"/>
+        <path d="M884 176 Q883 168 892 167 L945 167 Q954 168 953 176 Z" fill="#B3C79A"/>
+        <text class="mono cap" x="900" y="188">HEAD</text>
+      </g>
+    </g>
+  </g>
+  <rect x=".5" y=".5" width="1199" height="419" rx="14" fill="none" stroke="#2A323B"/>
+</svg>
